@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,6 +22,36 @@ from dotenv import load_dotenv
 load_dotenv(BASE_DIR / '.env')
 
 
+def env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "t", "yes", "y", "on"}
+
+
+def env_first(*names, default=None):
+    for name in names:
+        value = os.getenv(name)
+        if value not in (None, ""):
+            return value
+    return default
+
+
+def parse_database_url(url: str):
+    parsed = urlparse(url)
+    if parsed.scheme not in {"postgres", "postgresql"}:
+        raise ValueError("DATABASE_URL precisa usar postgres:// ou postgresql://")
+
+    return {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': unquote(parsed.path.lstrip('/') or 'impressoras'),
+        'USER': unquote(parsed.username or 'postgres'),
+        'PASSWORD': unquote(parsed.password or ''),
+        'HOST': parsed.hostname or 'localhost',
+        'PORT': str(parsed.port or '5432'),
+    }
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -28,9 +59,13 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-(d8@d!##3p$(o7^elw#avm+$d!%7@fl49hmj)tib$%i4m(j(%o')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool('DJANGO_DEBUG', True)
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*']
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in env_first('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1,*').split(',')
+    if host.strip()
+]
 
 
 
@@ -79,16 +114,23 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'impressoras'),
-        'USER': os.getenv('POSTGRES_USER', 'postgres'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
-        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),
+database_url = env_first('DATABASE_URL', 'POSTGRES_URL', 'POSTGRESQL_URL')
+
+if database_url:
+    DATABASES = {
+        'default': parse_database_url(database_url)
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': env_first('POSTGRES_DB', 'DB_NAME', 'PGDATABASE', default='impressoras'),
+            'USER': env_first('POSTGRES_USER', 'DB_USER', 'PGUSER', default='postgres'),
+            'PASSWORD': env_first('POSTGRES_PASSWORD', 'DB_PASSWORD', 'PGPASSWORD', default=''),
+            'HOST': env_first('POSTGRES_HOST', 'DB_HOST', 'PGHOST', default='localhost'),
+            'PORT': env_first('POSTGRES_PORT', 'DB_PORT', 'PGPORT', default='5432'),
+        }
+    }
 
 
 # Password validation
