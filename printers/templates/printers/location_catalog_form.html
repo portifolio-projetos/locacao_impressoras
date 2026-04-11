@@ -1,0 +1,41 @@
+{% extends "printers/base.html" %}
+
+{% block title %}{% if location_catalog_item %}Editar{% else %}Novo{% endif %} Local Base · Locação de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+            <h2 class="h4 mb-1">{% if location_catalog_item %}Editar local base{% else %}Novo local base{% endif %}</h2>
+            <p class="text-muted mb-0">Cadastre apenas o nome do local, sem cidade e sem setor.</p>
+        </div>
+        <a href="{% url 'printers:location-catalog-list' %}" class="btn btn-outline-secondary">Voltar para lista</a>
+    </div>
+</div>
+
+<form method="post" class="card border-0 shadow-sm">
+    <div class="card-body">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="row g-3">
+            <div class="col-12 col-md-8">
+                <label class="form-label" for="{{ form.name.id_for_label }}">Nome do local</label>
+                {{ form.name }}
+                <div class="form-text">Exemplos: Prefeitura Municipal, Secretaria de Saúde, Secretaria de Educação.</div>
+                {% for error in form.name.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="card-footer d-flex flex-column flex-md-row gap-2 justify-content-md-between">
+        <a href="{% url 'printers:location-catalog-list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary ms-md-auto">Salvar</button>
+    </div>
+</form>
+{% endblock %}

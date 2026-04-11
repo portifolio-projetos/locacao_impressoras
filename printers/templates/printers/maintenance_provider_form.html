@@ -1,0 +1,79 @@
+{% extends "printers/base.html" %}
+
+{% block title %}{% if provider %}Editar{% else %}Novo{% endif %} Local de manutencao · Locacao de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+            <h2 class="h4 mb-1">{% if provider %}Editar local de manutencao{% else %}Novo local de manutencao{% endif %}</h2>
+            <p class="text-muted mb-0">Informe os dados do fornecedor para carregar tudo pronto no registro da manutencao.</p>
+        </div>
+        <a href="{% url 'printers:maintenance-provider-list' %}" class="btn btn-outline-secondary">Voltar para lista</a>
+    </div>
+</div>
+
+<form method="post" class="card border-0 shadow-sm">
+    <div class="card-body">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="row g-3">
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.supplier_name.id_for_label }}">Nome do fornecedor</label>
+                {{ form.supplier_name }}
+                {% for error in form.supplier_name.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.contact_name.id_for_label }}">Nome do responsavel</label>
+                {{ form.contact_name }}
+                {% for error in form.contact_name.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="{{ form.address.id_for_label }}">Endereco</label>
+                {{ form.address }}
+                {% for error in form.address.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label" for="{{ form.neighborhood.id_for_label }}">Bairro</label>
+                {{ form.neighborhood }}
+                {% for error in form.neighborhood.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label" for="{{ form.city.id_for_label }}">Cidade</label>
+                {{ form.city }}
+                {% for error in form.city.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label" for="{{ form.state.id_for_label }}">UF</label>
+                {{ form.state }}
+                {% for error in form.state.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label" for="{{ form.phone.id_for_label }}">Telefone</label>
+                {{ form.phone }}
+                {% for error in form.phone.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="card-footer d-flex flex-column flex-md-row gap-2 justify-content-md-between">
+        <a href="{% url 'printers:maintenance-provider-list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary ms-md-auto">Salvar</button>
+    </div>
+</form>
+{% endblock %}

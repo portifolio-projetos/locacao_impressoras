@@ -1,0 +1,360 @@
+{% extends "printers/base.html" %}
+
+{% block title %}Entrar · Locação de Impressoras{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+    main.content-wrap {
+        padding-top: clamp(0.75rem, 2vw, 1.5rem);
+    }
+
+    .login-shell {
+        min-height: calc(100vh - 150px);
+        display: flex;
+        align-items: center;
+    }
+
+    .login-card {
+        width: 100%;
+        border-radius: 28px;
+        overflow: hidden;
+        border: 1px solid rgba(12, 71, 122, 0.1);
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: 0 30px 60px rgba(12, 71, 122, 0.18);
+    }
+
+    .login-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+    }
+
+    .login-hero {
+        position: relative;
+        padding: 3rem;
+        color: #ffffff;
+        background:
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.18), transparent 30%),
+            radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.14), transparent 24%),
+            linear-gradient(145deg, #0a6ab6 0%, #17759f 42%, #1c7c54 100%);
+    }
+
+    .login-hero::after {
+        content: "";
+        position: absolute;
+        inset: 1.25rem;
+        border-radius: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        pointer-events: none;
+    }
+
+    .hero-content,
+    .hero-footer {
+        position: relative;
+        z-index: 1;
+    }
+
+    .hero-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.42rem 0.8rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        background: rgba(255, 255, 255, 0.16);
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .login-hero h1 {
+        margin: 1.25rem 0 0.8rem;
+        font-size: clamp(2rem, 4vw, 2.7rem);
+        line-height: 1.05;
+    }
+
+    .hero-lead {
+        max-width: 28rem;
+        margin: 0;
+        color: rgba(255, 255, 255, 0.88);
+        font-size: 1rem;
+        line-height: 1.65;
+    }
+
+    .feature-list {
+        margin: 2.25rem 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 0.9rem;
+    }
+
+    .feature-list li {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        font-size: 0.97rem;
+        font-weight: 500;
+    }
+
+    .feature-list i {
+        width: 2rem;
+        height: 2rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.16);
+        color: #ffffff;
+        flex-shrink: 0;
+    }
+
+    .hero-footer {
+        margin-top: 2.5rem;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 0.92rem;
+    }
+
+    .login-form-pane {
+        padding: 3rem;
+        background: rgba(255, 255, 255, 0.98);
+    }
+
+    .login-form-header {
+        margin-bottom: 1.75rem;
+    }
+
+    .login-form-header h2 {
+        margin-bottom: 0.4rem;
+        font-size: clamp(1.5rem, 2vw, 1.9rem);
+    }
+
+    .login-form-header p {
+        margin: 0;
+        color: #5f6b7a;
+    }
+
+    .login-form .form-label {
+        font-weight: 600;
+        color: #17324a;
+    }
+
+    .login-form .input-group {
+        align-items: stretch;
+    }
+
+    .login-form .input-group-text {
+        border-radius: 14px 0 0 14px;
+        background: #f4f8fc;
+        border: 1px solid rgba(12, 71, 122, 0.14);
+        border-right: none;
+        color: #4d6680;
+        min-width: 3rem;
+        justify-content: center;
+    }
+
+    .login-form .form-control {
+        min-height: 3.25rem;
+        border-radius: 0 14px 14px 0;
+        border: 1px solid rgba(12, 71, 122, 0.14);
+        border-left: none;
+        background: #fdfefe;
+    }
+
+    .login-form .form-control:focus {
+        background: #ffffff;
+        border-color: rgba(10, 106, 182, 0.32);
+        box-shadow: 0 0 0 0.22rem rgba(10, 106, 182, 0.12);
+    }
+
+    .login-helper {
+        color: #6a7787;
+        font-size: 0.82rem;
+        line-height: 1.35;
+    }
+
+    .btn-login {
+        width: 100%;
+        min-height: 3.25rem;
+        border-radius: 14px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+    }
+
+    .support-note {
+        margin: 1.25rem 0 0;
+        color: #6a7787;
+        text-align: center;
+        font-size: 0.9rem;
+    }
+
+    @media (max-width: 991.98px) {
+        .login-shell {
+            min-height: auto;
+            align-items: stretch;
+        }
+
+        .login-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .login-card {
+            border-radius: 22px;
+        }
+
+        .login-hero,
+        .login-form-pane {
+            padding: 2rem 1.6rem;
+        }
+
+        .login-hero::after {
+            inset: 1rem;
+            border-radius: 18px;
+        }
+
+        .hero-footer {
+            margin-top: 1.8rem;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .login-shell .container {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+
+        .login-card {
+            border-radius: 18px;
+        }
+
+        .login-hero,
+        .login-form-pane {
+            padding: 1.35rem 1rem;
+        }
+
+        .login-hero::after {
+            inset: 0.75rem;
+            border-radius: 16px;
+        }
+
+        .feature-list {
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .feature-list li {
+            align-items: flex-start;
+            font-size: 0.9rem;
+        }
+
+        .login-form-header {
+            margin-bottom: 1.25rem;
+            text-align: center;
+        }
+
+        .login-form .form-label {
+            font-size: 0.95rem;
+        }
+
+        .login-helper {
+            display: block;
+            margin-top: 0.35rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="login-shell">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-xl-11 col-xxl-10">
+                <div class="login-card">
+                    <div class="login-grid">
+                        <div class="login-hero">
+                            <div class="hero-content">
+                                <span class="hero-chip">
+                                    <i class="bi bi-shield-lock"></i>
+                                    Acesso seguro
+                                </span>
+                                <h1>Bem-vindo</h1>
+                                <p class="hero-lead">
+                                    Gerencie o parque de impressão com indicadores atualizados, controle de manutenção e cadastros de forma centralizada.
+                                </p>
+                                <ul class="feature-list">
+                                    <li>
+                                        <i class="bi bi-graph-up-arrow"></i>
+                                        Painéis com dados em tempo real
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-tools"></i>
+                                        Fluxo completo de manutenção
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-people"></i>
+                                        Gestão de colaboradores integrada
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="hero-footer">
+                                Plataforma preparada para uso em computador, tablet e celular.
+                            </div>
+                        </div>
+
+                        <div class="login-form-pane">
+                            <div class="login-form-header">
+                                <h2 class="d-inline-flex align-items-center gap-2">
+                                    <i class="bi bi-box-arrow-in-right text-primary"></i>
+                                    Acessar o sistema
+                                </h2>
+                                <p>Informe suas credenciais corporativas.</p>
+                            </div>
+
+                            <form method="post" novalidate class="login-form">
+                                {% csrf_token %}
+                                {% if form.non_field_errors %}
+                                    <div class="alert alert-danger" role="alert">
+                                        {{ form.non_field_errors }}
+                                    </div>
+                                {% endif %}
+
+                                <div class="mb-3">
+                                    <label class="form-label" for="{{ form.username.id_for_label }}">Usuário</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                        {{ form.username }}
+                                    </div>
+                                    {% for error in form.username.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="mb-4">
+                                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-1 mb-1">
+                                        <label class="form-label mb-0" for="{{ form.password.id_for_label }}">Senha</label>
+                                        <span class="login-helper">Acesso restrito a colaboradores autorizados</span>
+                                    </div>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-key"></i></span>
+                                        {{ form.password }}
+                                    </div>
+                                    {% for error in form.password.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-login">
+                                    <i class="bi bi-box-arrow-in-right"></i> Entrar
+                                </button>
+                            </form>
+
+                            <p class="support-note">
+                                Dificuldades para acessar? Procure o administrador do sistema.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

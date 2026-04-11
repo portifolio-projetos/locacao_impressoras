@@ -1,0 +1,23 @@
+{% extends "printers/base.html" %}
+
+{% block title %}Excluir modelo · Locação de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <h2 class="h4 mb-1">Excluir modelo</h2>
+    <p class="text-muted mb-0">Remova o modelo <strong>{{ printer_model }}</strong> somente após realocar as impressoras.</p>
+</div>
+
+<form method="post" class="card border-0 shadow-sm">
+    <div class="card-body">
+        {% csrf_token %}
+        <div class="alert alert-warning" role="alert">
+            Os equipamentos associados a este modelo precisarão ser migrados para outra opção cadastrada.
+        </div>
+    </div>
+    <div class="card-footer d-flex flex-column flex-md-row gap-2 justify-content-md-between">
+        <a href="{% url 'printers:model-list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-danger ms-md-auto">Excluir</button>
+    </div>
+</form>
+{% endblock %}

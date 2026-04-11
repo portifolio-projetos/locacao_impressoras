@@ -1,0 +1,585 @@
+{% extends "printers/base.html" %}
+
+{% block title %}{% if printer %}Editar{% else %}Nova{% endif %} Impressora · Locação de Impressoras{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+    .scanner-trigger {
+        min-width: 150px;
+        font-weight: 600;
+    }
+
+    .scanner-video {
+        width: 100%;
+        max-height: 50vh;
+        border-radius: 16px;
+        background: #0f1720;
+        object-fit: cover;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .scanner-status {
+        min-height: 1.65rem;
+        border-radius: 10px;
+        background: #f3f7fb;
+        border: 1px solid rgba(12, 71, 122, 0.12);
+        padding: 0.5rem 0.7rem;
+    }
+
+    .scanner-helper {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        color: #47617a;
+    }
+
+    .scanner-pane {
+        border-radius: 14px;
+        background: linear-gradient(145deg, #0f2033, #1e3f63);
+        padding: 0.6rem;
+    }
+
+    .scanner-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.45rem;
+    }
+
+    .scanner-toolbar .badge {
+        font-size: 0.74rem;
+        letter-spacing: 0.01em;
+    }
+
+    @media (max-width: 767.98px) {
+        .scanner-trigger {
+            min-width: 124px;
+            font-size: 0.88rem;
+        }
+
+        .scanner-video {
+            max-height: 42vh;
+            border-radius: 12px;
+        }
+
+        .scanner-pane {
+            padding: 0.45rem;
+            border-radius: 12px;
+        }
+    }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+            <h2 class="h4 mb-1 d-flex align-items-center gap-2"><i class="bi bi-printer-fill text-primary"></i>{% if printer %}Editar impressora{% else %}Nova impressora{% endif %}</h2>
+            <p class="text-muted mb-0">Escolha a cidade e depois o setor já cadastrado dentro do local correto.</p>
+        </div>
+        <a href="{% url 'printers:printer-list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar para lista</a>
+    </div>
+</div>
+
+<form method="post" class="card border-0 shadow-sm" action="{{ form_action_query }}">
+    <div class="card-body">
+        {% csrf_token %}
+        {% for hidden in form.hidden_fields %}
+            {{ hidden }}
+        {% endfor %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="row g-3">
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.serial_number.id_for_label }}">Nº de série</label>
+                <div class="input-group">
+                    {{ form.serial_number }}
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary scanner-trigger js-open-scanner"
+                        data-target-field="id_serial_number"
+                        data-scan-mode="ocr"
+                    >
+                        <i class="bi bi-camera"></i> Ler camera
+                    </button>
+                </div>
+                <div class="form-text scanner-helper"><i class="bi bi-phone"></i>No celular, use a câmera ou uma foto para preencher automaticamente.</div>
+                <div class="form-text scanner-helper"><i class="bi bi-search"></i>O texto lido também fica salvo para pesquisa futura.</div>
+                {% for error in form.serial_number.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.patrimony_number.id_for_label }}">Número de patrimônio</label>
+                {{ form.patrimony_number }}
+                {% for error in form.patrimony_number.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.barcode.id_for_label }}">Código de barras</label>
+                <div class="input-group">
+                    {{ form.barcode }}
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary scanner-trigger js-open-scanner"
+                        data-target-field="id_barcode"
+                        data-scan-mode="barcode"
+                    >
+                        <i class="bi bi-upc-scan"></i> Ler camera
+                    </button>
+                </div>
+                <div class="form-text scanner-helper"><i class="bi bi-camera-video"></i>Opcional: leitura automática por câmera ou por foto.</div>
+                <div class="form-text scanner-helper"><i class="bi bi-clock-history"></i>O valor lido também fica salvo para consulta posterior.</div>
+                {% for error in form.barcode.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.model.id_for_label }}">Modelo</label>
+                {{ form.model }}
+                {% for error in form.model.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.city.id_for_label }}">Cidade</label>
+                {{ form.city }}
+                {% for error in form.city.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.sector.id_for_label }}">Setor</label>
+                {{ form.sector }}
+                <div class="form-text">A lista mostra no formato Local - Setor.</div>
+                {% for error in form.sector.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.location.id_for_label }}">Local</label>
+                {{ form.location }}
+                <div class="form-text">Preenchido automaticamente conforme o setor selecionado.</div>
+                {% for error in form.location.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.installed_at.id_for_label }}">Data de instalação</label>
+                {{ form.installed_at }}
+                {% for error in form.installed_at.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="{{ form.notes.id_for_label }}">Observações</label>
+                {{ form.notes }}
+                {% for error in form.notes.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="card-footer d-flex flex-column flex-md-row gap-2 justify-content-md-between">
+        <a href="{% if printer %}{% url 'printers:printer-detail' printer.id %}{% else %}{% url 'printers:printer-list' %}{% endif %}" class="btn btn-outline-secondary"><i class="bi bi-x-circle"></i> Cancelar</a>
+        <button type="submit" class="btn btn-primary ms-md-auto"><i class="bi bi-save"></i> Salvar</button>
+    </div>
+</form>
+
+<input type="file" id="scannerImageInput" accept="image/*" capture="environment" class="d-none">
+
+<div class="modal fade" id="scannerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title d-flex align-items-center gap-2" id="scannerModalTitle"><i class="bi bi-camera"></i>Leitura por camera</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="scanner-pane">
+                    <div class="scanner-toolbar">
+                        <span class="badge text-bg-light"><i class="bi bi-phone"></i> Camera ativa</span>
+                        <span class="badge text-bg-info">Posicione o campo no centro</span>
+                    </div>
+                    <video id="scannerVideo" class="scanner-video" autoplay playsinline muted></video>
+                </div>
+                <canvas id="scannerCanvas" class="d-none"></canvas>
+                <div id="scannerStatus" class="scanner-status small text-muted mt-3"></div>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> Fechar</button>
+                <button type="button" class="btn btn-primary d-none" id="scannerCaptureButton"><i class="bi bi-camera-fill"></i> Capturar e ler</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+{{ sector_locations|json_script:"sector-locations-data" }}
+{{ sector_choices|json_script:"sector-choices-data" }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const sectorSelect = document.getElementById('id_sector');
+    const locationInput = document.getElementById('id_location');
+    const dataElement = document.getElementById('sector-locations-data');
+    const choiceElement = document.getElementById('sector-choices-data');
+    const citySelect = document.getElementById('id_city');
+    const scannerButtons = Array.from(document.querySelectorAll('.js-open-scanner'));
+    const serialInput = document.getElementById('id_serial_number');
+    const serialScanInput = document.getElementById('id_serial_number_scan_text');
+    const barcodeInput = document.getElementById('id_barcode');
+    const barcodeScanInput = document.getElementById('id_barcode_scan_text');
+    const scannerModalElement = document.getElementById('scannerModal');
+    const scannerVideo = document.getElementById('scannerVideo');
+    const scannerCanvas = document.getElementById('scannerCanvas');
+    const scannerStatus = document.getElementById('scannerStatus');
+    const scannerModalTitle = document.getElementById('scannerModalTitle');
+    const scannerCaptureButton = document.getElementById('scannerCaptureButton');
+    const scannerImageInput = document.getElementById('scannerImageInput');
+    const scannerModal = scannerModalElement ? new bootstrap.Modal(scannerModalElement) : null;
+
+    if (!sectorSelect || !locationInput || !dataElement || !choiceElement || !citySelect) {
+        return;
+    }
+
+    const mapping = JSON.parse(dataElement.textContent || '{}');
+    const choices = JSON.parse(choiceElement.textContent || '{}');
+
+    const populateSectors = () => {
+        const selectedCity = citySelect.value || '';
+        const sectorOptions = choices[selectedCity] || [];
+        const currentValue = sectorSelect.value;
+
+        while (sectorSelect.firstChild) {
+            sectorSelect.removeChild(sectorSelect.firstChild);
+        }
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Selecione um setor';
+        sectorSelect.appendChild(placeholder);
+
+        let shouldRestore = false;
+        sectorOptions.forEach((entry) => {
+            const option = document.createElement('option');
+            option.value = entry.id;
+            option.textContent = entry.label || entry.name;
+            if (entry.id === currentValue) {
+                option.selected = true;
+                shouldRestore = true;
+            }
+            sectorSelect.appendChild(option);
+        });
+
+        if (!shouldRestore) {
+            sectorSelect.value = '';
+        }
+        updateLocation();
+    };
+
+    const updateLocation = () => {
+        const sectorId = sectorSelect.value;
+        if (sectorId && Object.prototype.hasOwnProperty.call(mapping, sectorId)) {
+            locationInput.value = mapping[sectorId] || '';
+        } else {
+            locationInput.value = '';
+        }
+    };
+
+    citySelect.addEventListener('change', populateSectors);
+    sectorSelect.addEventListener('change', updateLocation);
+    populateSectors();
+
+    let activeStream = null;
+    let activeField = null;
+    let activeMode = null;
+    let scanTimer = null;
+
+    const stopScanner = () => {
+        if (scanTimer) {
+            window.clearInterval(scanTimer);
+            scanTimer = null;
+        }
+        if (activeStream) {
+            activeStream.getTracks().forEach((track) => track.stop());
+            activeStream = null;
+        }
+        if (scannerVideo) {
+            scannerVideo.srcObject = null;
+        }
+    };
+
+    const setStatus = (message, isError = false) => {
+        if (!scannerStatus) {
+            return;
+        }
+        scannerStatus.textContent = message;
+        scannerStatus.classList.toggle('text-danger', isError);
+        scannerStatus.classList.toggle('text-muted', !isError);
+    };
+
+    const readImageFile = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error('image-load-failed'));
+            image.src = reader.result;
+        };
+        reader.onerror = () => reject(new Error('file-read-failed'));
+        reader.readAsDataURL(file);
+    });
+
+    const fillTargetField = (value) => {
+        if (!activeField || !value) {
+            return;
+        }
+        const normalizedValue = value.trim();
+        activeField.value = normalizedValue;
+        if (activeField === serialInput && serialScanInput) {
+            serialScanInput.value = normalizedValue;
+        }
+        if (activeField === barcodeInput && barcodeScanInput) {
+            barcodeScanInput.value = normalizedValue;
+        }
+        activeField.dispatchEvent(new Event('input', { bubbles: true }));
+        activeField.dispatchEvent(new Event('change', { bubbles: true }));
+        scannerModal.hide();
+    };
+
+    const captureFromSelectedImage = async (file) => {
+        if (!file || !scannerCanvas) {
+            return;
+        }
+
+        try {
+            const image = await readImageFile(file);
+            scannerCanvas.width = image.width;
+            scannerCanvas.height = image.height;
+            const context = scannerCanvas.getContext('2d');
+            context.drawImage(image, 0, 0, image.width, image.height);
+
+            if (activeMode === 'barcode') {
+                if (!('BarcodeDetector' in window)) {
+                    setStatus('Seu navegador nao suporta leitura automatica de codigo por foto. Tente Chrome no celular.', true);
+                    return;
+                }
+
+                const detector = new BarcodeDetector({
+                    formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code']
+                });
+                const results = await detector.detect(scannerCanvas);
+                if (results.length && results[0].rawValue) {
+                    fillTargetField(results[0].rawValue);
+                    return;
+                }
+                setStatus('Nao encontrei um codigo de barras legivel na foto. Tente aproximar mais.', true);
+                return;
+            }
+
+            if (!window.Tesseract) {
+                setStatus('OCR nao disponivel nesta tela.', true);
+                return;
+            }
+
+            setStatus('Lendo o numero de serie da foto...');
+            const result = await window.Tesseract.recognize(scannerCanvas, 'eng');
+            const text = (result.data.text || '')
+                .replace(/\s+/g, ' ')
+                .replace(/[^A-Za-z0-9\-_/]/g, ' ')
+                .trim();
+
+            if (text) {
+                fillTargetField(text);
+                return;
+            }
+            setStatus('Nao consegui identificar o numero de serie na foto. Tente uma imagem mais nitida.', true);
+        } catch (error) {
+            setStatus('Nao foi possivel processar a foto selecionada.', true);
+        }
+    };
+
+    const openImageCaptureFallback = (reasonMessage) => {
+        setStatus(reasonMessage, true);
+        if (scannerImageInput) {
+            window.setTimeout(() => {
+                scannerImageInput.click();
+            }, 150);
+        }
+    };
+
+    const scanBarcodeLoop = async () => {
+        if (!('BarcodeDetector' in window)) {
+            setStatus('Leitura de codigo de barras nao suportada neste navegador. Tente Chrome no celular.', true);
+            return;
+        }
+
+        const detector = new BarcodeDetector({
+            formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code']
+        });
+
+        setStatus('Aponte a camera para o codigo de barras.');
+        scanTimer = window.setInterval(async () => {
+            if (!scannerVideo || scannerVideo.readyState < 2) {
+                return;
+            }
+            try {
+                const results = await detector.detect(scannerVideo);
+                if (results.length && results[0].rawValue) {
+                    fillTargetField(results[0].rawValue);
+                }
+            } catch (error) {
+                setStatus('Nao foi possivel ler o codigo de barras agora.', true);
+            }
+        }, 500);
+    };
+
+    const captureForOcr = async () => {
+        if (!scannerVideo || !scannerCanvas || !window.Tesseract) {
+            setStatus('OCR nao disponivel nesta tela.', true);
+            return;
+        }
+
+        const width = scannerVideo.videoWidth;
+        const height = scannerVideo.videoHeight;
+        if (!width || !height) {
+            setStatus('A camera ainda nao ficou pronta. Tente novamente.', true);
+            return;
+        }
+
+        scannerCanvas.width = width;
+        scannerCanvas.height = height;
+        const context = scannerCanvas.getContext('2d');
+        context.drawImage(scannerVideo, 0, 0, width, height);
+
+        setStatus('Lendo o numero de serie na imagem...');
+        scannerCaptureButton.disabled = true;
+
+        try {
+            const result = await window.Tesseract.recognize(scannerCanvas, 'eng');
+            const text = (result.data.text || '')
+                .replace(/\s+/g, ' ')
+                .replace(/[^A-Za-z0-9\-_/]/g, ' ')
+                .trim();
+
+            if (text) {
+                fillTargetField(text);
+                return;
+            }
+            setStatus('Nao consegui identificar o numero de serie. Aproxime a camera e tente novamente.', true);
+        } catch (error) {
+            setStatus('Erro ao tentar ler o numero de serie.', true);
+        } finally {
+            scannerCaptureButton.disabled = false;
+        }
+    };
+
+    const openScanner = async (fieldId, mode) => {
+        activeField = document.getElementById(fieldId);
+        activeMode = mode;
+        if (!activeField || !scannerModal || !scannerVideo || !scannerCaptureButton || !scannerModalTitle) {
+            return;
+        }
+
+        stopScanner();
+        scannerCaptureButton.classList.toggle('d-none', mode !== 'ocr');
+        scannerModalTitle.textContent = mode === 'barcode' ? 'Ler codigo de barras' : 'Ler numero de serie';
+        setStatus('Abrindo camera...');
+        scannerModal.show();
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            openImageCaptureFallback('Este navegador nao liberou a camera ao vivo. Vamos tentar pela camera de foto do aparelho.');
+            return;
+        }
+
+        try {
+            activeStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: 'environment' } },
+                audio: false
+            });
+            scannerVideo.srcObject = activeStream;
+            await scannerVideo.play();
+
+            if (mode === 'barcode') {
+                scanBarcodeLoop();
+            } else {
+                setStatus('Posicione o numero de serie na camera e toque em "Capturar e ler".');
+            }
+        } catch (error) {
+            const pageNeedsHttps =
+                window.location.protocol !== 'https:' &&
+                window.location.hostname !== 'localhost' &&
+                window.location.hostname !== '127.0.0.1';
+
+            if (error && error.name === 'NotAllowedError') {
+                openImageCaptureFallback(
+                    pageNeedsHttps
+                        ? 'O celular bloqueou a camera porque a pagina nao esta em HTTPS. Vou abrir a camera por foto como alternativa.'
+                        : 'O navegador nao permitiu o acesso a camera. Vou abrir a camera por foto como alternativa.'
+                );
+                return;
+            }
+
+            if (error && (error.name === 'NotFoundError' || error.name === 'OverconstrainedError')) {
+                openImageCaptureFallback('Nao encontrei uma camera traseira disponivel. Vamos tentar usando foto do aparelho.');
+                return;
+            }
+
+            openImageCaptureFallback('Nao foi possivel acessar a camera ao vivo neste dispositivo. Vamos tentar pela camera de foto.');
+        }
+    };
+
+    scannerButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            openScanner(button.dataset.targetField, button.dataset.scanMode);
+        });
+    });
+
+    if (serialInput && serialScanInput) {
+        const syncSerialSearchText = () => {
+            serialScanInput.value = serialInput.value.trim();
+        };
+        serialInput.addEventListener('input', syncSerialSearchText);
+        serialInput.addEventListener('change', syncSerialSearchText);
+        syncSerialSearchText();
+    }
+
+    if (barcodeInput && barcodeScanInput) {
+        const syncBarcodeSearchText = () => {
+            barcodeScanInput.value = barcodeInput.value.trim();
+        };
+        barcodeInput.addEventListener('input', syncBarcodeSearchText);
+        barcodeInput.addEventListener('change', syncBarcodeSearchText);
+        syncBarcodeSearchText();
+    }
+
+    if (scannerCaptureButton) {
+        scannerCaptureButton.addEventListener('click', captureForOcr);
+    }
+
+    if (scannerImageInput) {
+        scannerImageInput.addEventListener('change', async (event) => {
+            const [file] = event.target.files || [];
+            if (!file) {
+                return;
+            }
+            await captureFromSelectedImage(file);
+            event.target.value = '';
+        });
+    }
+
+    if (scannerModalElement) {
+        scannerModalElement.addEventListener('hidden.bs.modal', stopScanner);
+    }
+});
+</script>
+{% endblock %}

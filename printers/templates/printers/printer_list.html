@@ -1,0 +1,288 @@
+{% extends "printers/base.html" %}
+
+{% block title %}Impressoras · Locação de Impressoras{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+    .printer-actions {
+        display: flex;
+        gap: 0.35rem;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    @media (max-width: 767.98px) {
+        .printer-actions {
+            justify-content: stretch;
+        }
+
+        .printer-actions .btn {
+            flex: 1;
+            min-width: 6.75rem;
+        }
+
+        .table thead th {
+            white-space: nowrap;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+            <h2 class="h4 mb-1 d-flex align-items-center gap-2"><i class="bi bi-printer-fill text-primary"></i>Impressoras por cidade</h2>
+            <p class="text-muted mb-0">Pesquise por codigo de barras, numero de serie, cidade ou modelo e depois refine por setor ou local.</p>
+        </div>
+        <a href="{% url 'printers:printer-create' %}" class="btn btn-success px-3 py-2"><i class="bi bi-plus-circle"></i> Nova impressora</a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-12 col-lg-8">
+                <label class="form-label" for="printer-search">Pesquisar impressoras</label>
+                <input
+                    type="text"
+                    class="form-control"
+                    id="printer-search"
+                    name="q"
+                    value="{{ search_query }}"
+                    placeholder="Ex.: RH, Cidade, HP, numero de serie ou codigo de barras"
+                >
+                <div class="form-text">A busca considera numero de serie, codigo de barras, cidade, modelo e os valores lidos pela camera.</div>
+            </div>
+            <div class="col-12 col-lg-4 d-grid d-md-flex gap-2 justify-content-lg-end">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Pesquisar</button>
+                {% if search_query %}
+                    <a href="{% url 'printers:printer-list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-circle"></i> Limpar busca</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if city_blocks %}
+    <div class="accordion" id="cityAccordion">
+        {% for block in city_blocks %}
+            <div class="accordion-item" data-city-id="{{ block.city.id }}">
+                <h2 class="accordion-header" id="heading-{{ block.city.id }}">
+                    <button class="accordion-button {% if not search_query %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ block.city.id }}" aria-expanded="{% if search_query %}true{% else %}false{% endif %}" aria-controls="collapse-{{ block.city.id }}">
+                        <div class="d-flex flex-column flex-lg-row flex-wrap gap-2 w-100 justify-content-between align-items-start align-items-lg-center">
+                            <div>
+                                <span class="fw-semibold">{{ block.city.name }}{% if block.city.state %}/{{ block.city.state }}{% endif %}</span>
+                                <div class="text-muted small">{{ block.sector_options|length }} setor(es) · {{ block.location_options|length }} local(is)</div>
+                            </div>
+                            <span class="chip">{{ block.printers|length }} impressoras</span>
+                        </div>
+                    </button>
+                </h2>
+                <div id="collapse-{{ block.city.id }}" class="accordion-collapse collapse {% if search_query %}show{% endif %}" aria-labelledby="heading-{{ block.city.id }}" data-bs-parent="#cityAccordion">
+                    <div class="accordion-body">
+                        <div class="row g-3 mb-3 align-items-end" data-city="{{ block.city.id }}">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label" for="sector-filter-{{ block.city.id }}">Filtrar por setor</label>
+                                <select class="form-select sector-filter" id="sector-filter-{{ block.city.id }}" data-city="{{ block.city.id }}">
+                                    <option value="">Todos os setores</option>
+                                    {% for option in block.sector_options %}
+                                        <option value="{{ option.id }}">{{ option.label|default:option.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label" for="location-filter-{{ block.city.id }}">Filtrar por local</label>
+                                <select class="form-select location-filter" id="location-filter-{{ block.city.id }}" data-city="{{ block.city.id }}">
+                                    <option value="">Todos os locais</option>
+                                    {% for location in block.location_options %}
+                                        <option value="{{ location }}">{{ location }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-4 d-grid d-md-flex gap-2 justify-content-md-end">
+                                <button type="button" class="btn btn-outline-secondary clear-filters" data-city="{{ block.city.id }}"><i class="bi bi-funnel"></i> Limpar filtros</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" data-city="{{ block.city.id }}">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Nº de série</th>
+                                        <th>Modelo</th>
+                                        <th>Setor</th>
+                                        <th>Local</th>
+                                        <th class="text-end">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {% if block.printers %}
+                                    {% for printer in block.printers %}
+                                        <tr data-sector="{{ printer.sector.id }}" data-location="{{ printer.location|default_if_none:"" }}">
+                                            <td>
+                                                <a href="{% url 'printers:printer-detail' printer.id %}" class="fw-semibold text-decoration-none">{{ printer.serial_number|default:"—" }}</a>
+                                                <div class="small text-muted mt-1">
+                                                    Patrimonio: {{ printer.patrimony_number|default:"—" }}<br>
+                                                    Codigo de barras: {{ printer.barcode|default:"—" }}
+                                                </div>
+                                            </td>
+                                            <td>{{ printer.model }}</td>
+                                            <td>{{ printer.sector.location.name }} - {{ printer.sector.name }}</td>
+                                            <td>{{ printer.location|default:"—" }}</td>
+                                            <td class="text-end">
+                                                <div class="printer-actions">
+                                                    <a href="{% url 'printers:maintenance-create' %}?printer={{ printer.id }}&city={{ printer.city_id }}&sector={{ printer.sector_id }}" class="btn btn-outline-warning btn-sm"><i class="bi bi-tools"></i> Manutencao</a>
+                                                    <a href="{% url 'printers:printer-update' printer.id %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i> Editar</a>
+                                                    <a href="{% url 'printers:printer-delete' printer.id %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Excluir</a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    <tr class="no-results-row is-hidden">
+                                        <td colspan="5">Nenhuma impressora encontrada para os filtros selecionados.</td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">Nenhuma impressora cadastrada nesta cidade.</td>
+                                    </tr>
+                                {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% with block.city.id|stringformat:"s" as city_id_str %}
+                {% with "sector-locations-city-"|add:city_id_str as script_id %}
+                    {{ block.sector_locations_map|json_script:script_id }}
+                {% endwith %}
+            {% endwith %}
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="page-section text-center">
+        {% if search_query %}
+            <p class="text-muted mb-2">Nenhuma impressora encontrada para "{{ search_query }}".</p>
+            <a href="{% url 'printers:printer-list' %}" class="btn btn-outline-secondary">Limpar busca</a>
+        {% else %}
+            <p class="text-muted mb-2">Nenhuma impressora cadastrada ainda.</p>
+            <a href="{% url 'printers:printer-create' %}" class="btn btn-success">Cadastrar primeira impressora</a>
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const panels = document.querySelectorAll('.accordion-item');
+
+    panels.forEach(panel => {
+        const cityId = panel.dataset.cityId;
+        const sectorSelect = panel.querySelector('.sector-filter');
+        const locationSelect = panel.querySelector('.location-filter');
+        const clearButton = panel.querySelector('.clear-filters');
+        const dataRows = Array.from(panel.querySelectorAll('tbody tr[data-sector]'));
+        const noResultsRow = panel.querySelector('.no-results-row');
+
+        if (!cityId || dataRows.length === 0) {
+            if (sectorSelect) sectorSelect.disabled = true;
+            if (locationSelect) locationSelect.disabled = true;
+            if (clearButton) clearButton.disabled = true;
+            return;
+        }
+
+        const scriptId = `sector-locations-city-${cityId}`;
+        const scriptElement = document.getElementById(scriptId);
+        const sectorLocationMap = scriptElement ? JSON.parse(scriptElement.textContent || '{}') : {};
+
+        const rebuildLocationOptions = () => {
+            const selectedSector = sectorSelect.value;
+            let locations;
+
+            if (selectedSector && sectorLocationMap[selectedSector]) {
+                locations = sectorLocationMap[selectedSector].slice();
+            } else {
+                const allLocations = [];
+                Object.values(sectorLocationMap).forEach(list => {
+                    list.forEach(value => {
+                        if (value) {
+                            allLocations.push(value);
+                        }
+                    });
+                });
+                Array.from(locationSelect.options)
+                    .slice(1)
+                    .forEach(option => {
+                        if (option.value) {
+                            allLocations.push(option.value);
+                        }
+                    });
+                locations = Array.from(new Set(allLocations));
+            }
+
+            const currentLocation = locationSelect.value;
+            locationSelect.innerHTML = '<option value="">Todos os locais</option>';
+            const uniqueLocations = Array.from(new Set(locations)).sort((a, b) => a.localeCompare(b));
+            uniqueLocations.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                locationSelect.appendChild(option);
+            });
+
+            if (currentLocation && Array.from(locationSelect.options).some(opt => opt.value === currentLocation)) {
+                locationSelect.value = currentLocation;
+            } else {
+                locationSelect.value = '';
+            }
+        };
+
+        const applyFilters = () => {
+            const selectedSector = sectorSelect.value;
+            const selectedLocation = locationSelect.value;
+
+            let visibleRows = 0;
+
+            dataRows.forEach(row => {
+                const rowSector = row.dataset.sector || '';
+                const rowLocation = row.dataset.location || '';
+
+                const matchesSector = !selectedSector || rowSector === selectedSector;
+                const matchesLocation = !selectedLocation || rowLocation === selectedLocation;
+
+                const shouldShow = matchesSector && matchesLocation;
+                row.classList.toggle('is-hidden', !shouldShow);
+                if (shouldShow) {
+                    visibleRows += 1;
+                }
+            });
+
+            if (noResultsRow) {
+                noResultsRow.classList.toggle('is-hidden', visibleRows !== 0);
+            }
+        };
+
+        sectorSelect.addEventListener('change', () => {
+            rebuildLocationOptions();
+            applyFilters();
+        });
+
+        locationSelect.addEventListener('change', applyFilters);
+
+        if (clearButton) {
+            clearButton.addEventListener('click', () => {
+                sectorSelect.value = '';
+                rebuildLocationOptions();
+                locationSelect.value = '';
+                applyFilters();
+            });
+        }
+
+        rebuildLocationOptions();
+    });
+});
+</script>
+{% endblock %}

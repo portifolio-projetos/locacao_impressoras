@@ -1,0 +1,21 @@
+{% extends "printers/base.html" %}
+
+{% block title %}Excluir Local de manutencao · Locacao de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <h2 class="h4 mb-1">Excluir local de manutencao</h2>
+    <p class="text-muted mb-0">Confirme a remocao do fornecedor {{ provider.supplier_name }}.</p>
+</div>
+
+<form method="post" class="card border-0 shadow-sm">
+    <div class="card-body">
+        {% csrf_token %}
+        <p class="mb-0">Se esse local ja estiver vinculado a manutencoes, a exclusao nao sera permitida.</p>
+    </div>
+    <div class="card-footer d-flex gap-2 justify-content-end">
+        <a href="{% url 'printers:maintenance-provider-list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-danger">Excluir</button>
+    </div>
+</form>
+{% endblock %}

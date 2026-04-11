@@ -1,0 +1,82 @@
+{% extends "printers/base.html" %}
+
+{% block title %}Setores · Locação de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+            <h2 class="h4 mb-1">Locais e setores</h2>
+            <p class="text-muted mb-0">Veja a estrutura de cada cidade separando o local principal dos setores internos.</p>
+        </div>
+        <a href="{% url 'printers:sector-create' %}" class="btn btn-success">Novo setor</a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-12 col-md-6 col-lg-4">
+                <label class="form-label" for="city-filter">Filtrar por cidade</label>
+                <select id="city-filter" name="city" class="form-select">
+                    <option value="">Selecione a cidade</option>
+                    {% for city in cities %}
+                        {% with city_id_str=city.id|stringformat:"s" %}
+                            <option value="{{ city.id }}" {% if city_id_str == selected_city_id %}selected{% endif %}>{{ city.name }}</option>
+                        {% endwith %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-3 col-lg-2 d-grid">
+                <button type="submit" class="btn btn-primary">Aplicar filtro</button>
+            </div>
+            {% if selected_city %}
+            <div class="col-12 col-md-3 col-lg-2 d-grid">
+                <a href="{% url 'printers:sector-binding-list' %}" class="btn btn-outline-secondary">Limpar</a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% if selected_city %}
+    {% if sectors %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Local</th>
+                        <th>Setor</th>
+                        <th>Impressoras</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for sector in sectors %}
+                    <tr>
+                        <td>{{ sector.location.name }}</td>
+                        <td>{{ sector.name }}</td>
+                        <td><span class="chip">{{ sector.printer_count }}</span></td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'printers:printer-create' %}?city={{ selected_city.id }}&sector={{ sector.id }}" class="btn btn-success">Nova impressora</a>
+                                <a href="{% url 'printers:sector-update' sector.id %}" class="btn btn-outline-primary">Editar</a>
+                                <a href="{% url 'printers:sector-delete' sector.id %}" class="btn btn-outline-danger">Excluir</a>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            Não há locais/setores cadastrados para {{ selected_city }}.
+        </div>
+    {% endif %}
+{% else %}
+    <div class="alert alert-secondary" role="alert">
+        Selecione uma cidade para visualizar seus locais e setores cadastrados.
+    </div>
+{% endif %}
+{% endblock %}

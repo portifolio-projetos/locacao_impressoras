@@ -1,0 +1,48 @@
+{% extends "printers/base.html" %}
+
+{% block title %}Colaboradores · Locação de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+            <h2 class="h4 mb-1">Colaboradores</h2>
+            <p class="text-muted mb-0">Gerencie os usuários responsáveis pelo parque de impressão.</p>
+        </div>
+        <a href="{% url 'printers:collaborator-create' %}" class="btn btn-primary">Novo colaborador</a>
+    </div>
+</div>
+
+<div class="page-section">
+    {% if collaborators %}
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Login</th>
+                        <th>Email</th>
+                        <th>Cargo</th>
+                        <th>Telefone</th>
+                        <th>Cadastrado em</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for collaborator in collaborators %}
+                        <tr>
+                            <td class="fw-semibold">{{ collaborator.full_name }}</td>
+                            <td>{{ collaborator.user.username|default:"-" }}</td>
+                            <td>{{ collaborator.email }}</td>
+                            <td>{{ collaborator.role|default:"—" }}</td>
+                            <td>{{ collaborator.phone|default:"—" }}</td>
+                            <td>{{ collaborator.created_at|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted mb-0">Nenhum colaborador cadastrado até o momento.</p>
+    {% endif %}
+</div>
+{% endblock %}

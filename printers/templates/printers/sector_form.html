@@ -1,0 +1,171 @@
+{% extends "printers/base.html" %}
+
+{% block title %}{% if sector %}Editar{% else %}Novo{% endif %} vínculo de setor · Locação de Impressoras{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+    .binding-card {
+        background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+        border: 1px solid rgba(10, 106, 182, 0.12);
+        border-radius: 18px;
+    }
+
+    .binding-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.45rem 0.8rem;
+        border-radius: 999px;
+        background: rgba(28, 124, 84, 0.1);
+        color: #1c7c54;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+            <h2 class="h4 mb-1">{% if sector %}Editar vínculo{% else %}Novo vínculo{% endif %}</h2>
+            <p class="text-muted mb-0">Selecione a cidade, depois o local, e veja os setores já vinculados antes de escolher o setor.</p>
+        </div>
+        <a href="{% url 'printers:sector-binding-list' %}" class="btn btn-outline-secondary">Voltar para vínculos</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-xl-8">
+        <form method="post" class="card border-0 shadow-sm">
+            <div class="card-body">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" for="{{ form.city.id_for_label }}">Cidade</label>
+                        {{ form.city }}
+                        <div class="form-text">Aparecem apenas as cidades já cadastradas.</div>
+                        {% for error in form.city.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" for="{{ form.location_base.id_for_label }}">Local</label>
+                        {{ form.location_base }}
+                        <div class="form-text">Escolha um local de base já cadastrado.</div>
+                        {% for error in form.location_base.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" for="{{ form.sector_base.id_for_label }}">Setor</label>
+                        {{ form.sector_base }}
+                        <div class="form-text">Depois escolha apenas um setor base ainda não vinculado nesse local.</div>
+                        {% for error in form.sector_base.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer d-flex flex-column flex-md-row gap-2 justify-content-md-between">
+                <a href="{% url 'printers:sector-binding-list' %}" class="btn btn-outline-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary ms-md-auto">Salvar vínculo</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-12 col-xl-4">
+        <div class="card border-0 shadow-sm h-100 binding-card">
+            <div class="card-body">
+                <h3 class="h5 mb-3">Já cadastrado neste local</h3>
+                <div id="binding-preview-empty" class="small text-muted">
+                    Escolha a cidade e o local para ver os setores já vinculados.
+                </div>
+                <div id="binding-preview-content" class="d-none">
+                    <div class="small text-uppercase text-muted mb-1">Cidade</div>
+                    <div id="binding-city-name" class="fw-semibold mb-3">-</div>
+                    <div class="small text-uppercase text-muted mb-1">Local</div>
+                    <div id="binding-location-name" class="fw-semibold mb-3">-</div>
+                    <div class="small text-uppercase text-muted mb-2">Setores já vinculados</div>
+                    <div id="binding-preview-list" class="d-flex flex-wrap gap-2"></div>
+                    <div id="binding-preview-none" class="small text-muted d-none">
+                        Nenhum setor vinculado neste local ainda.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+{{ existing_bindings|json_script:"existing-bindings-data" }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const citySelect = document.getElementById('id_city');
+    const locationSelect = document.getElementById('id_location_base');
+    const dataElement = document.getElementById('existing-bindings-data');
+    const previewEmpty = document.getElementById('binding-preview-empty');
+    const previewContent = document.getElementById('binding-preview-content');
+    const previewNone = document.getElementById('binding-preview-none');
+    const previewList = document.getElementById('binding-preview-list');
+    const cityName = document.getElementById('binding-city-name');
+    const locationName = document.getElementById('binding-location-name');
+
+    if (!citySelect || !locationSelect || !dataElement) {
+        return;
+    }
+
+    const bindings = JSON.parse(dataElement.textContent || '{}');
+
+    const renderPreview = () => {
+        const cityId = citySelect.value || '';
+        const locationLabel = locationSelect.options[locationSelect.selectedIndex]?.textContent || '';
+        const bindingKey = cityId && locationLabel ? `${cityId}:${locationLabel.toLowerCase()}` : '';
+
+        previewList.innerHTML = '';
+        previewContent.classList.add('d-none');
+        previewEmpty.classList.add('d-none');
+        previewNone.classList.add('d-none');
+
+        if (!cityId || !locationLabel) {
+            previewEmpty.classList.remove('d-none');
+            return;
+        }
+
+        cityName.textContent = citySelect.options[citySelect.selectedIndex]?.textContent || '-';
+        locationName.textContent = locationLabel || '-';
+
+        const items = bindings[bindingKey] || [];
+        if (!items.length) {
+            previewContent.classList.remove('d-none');
+            previewNone.classList.remove('d-none');
+            return;
+        }
+
+        items.forEach((item) => {
+            const chip = document.createElement('span');
+            chip.className = 'binding-chip';
+            chip.textContent = item;
+            previewList.appendChild(chip);
+        });
+
+        previewContent.classList.remove('d-none');
+    };
+
+    citySelect.addEventListener('change', renderPreview);
+    locationSelect.addEventListener('change', renderPreview);
+    renderPreview();
+});
+</script>
+{% endblock %}

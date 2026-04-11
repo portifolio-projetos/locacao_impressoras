@@ -1,0 +1,23 @@
+{% extends "printers/base.html" %}
+
+{% block title %}Excluir setor · Locação de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <h2 class="h4 mb-1">Excluir setor</h2>
+    <p class="text-muted mb-0">Remova o setor <strong>{{ sector.name }}</strong> e realoque as impressoras antes de confirmar.</p>
+</div>
+
+<form method="post" class="card border-0 shadow-sm">
+    <div class="card-body">
+        {% csrf_token %}
+        <div class="alert alert-warning" role="alert">
+            O setor está vinculado à cidade <strong>{{ sector.city }}</strong>. Após a exclusão, as impressoras precisarão ser reassociadas a outro setor.
+        </div>
+    </div>
+    <div class="card-footer d-flex flex-column flex-md-row gap-2 justify-content-md-between">
+        <a href="{% url 'printers:sector-binding-list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-danger ms-md-auto">Excluir</button>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends "printers/base.html" %}
+
+{% block title %}{{ printer.serial_number|default:"Impressora" }} · Locacao de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+            <h2 class="h4 mb-1">Impressora {{ printer.serial_number|default:"sem numero de serie" }}</h2>
+            <p class="text-muted mb-0">{{ printer.model }}{% if printer.city %} instalada em {{ printer.city }}{% endif %}.</p>
+        </div>
+        <div class="d-flex flex-column flex-md-row gap-2">
+            <a href="{% url 'printers:printer-update' printer.id %}" class="btn btn-primary">Editar</a>
+            <a href="{% url 'printers:printer-delete' printer.id %}" class="btn btn-outline-danger">Excluir</a>
+            <a href="{% url 'printers:printer-list' %}" class="btn btn-outline-secondary">Voltar</a>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="row g-4">
+            <div class="col-12 col-md-6">
+                <div class="text-uppercase text-muted small mb-1">Numero de serie</div>
+                <div class="fw-semibold">{{ printer.serial_number|default_if_none:""|default:"-" }}</div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="text-uppercase text-muted small mb-1">Patrimonio</div>
+                <div class="fw-semibold">{{ printer.patrimony_number|default_if_none:""|default:"-" }}</div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="text-uppercase text-muted small mb-1">Codigo de barras</div>
+                <div class="fw-semibold">{{ printer.barcode|default_if_none:""|default:"-" }}</div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="text-uppercase text-muted small mb-1">Modelo</div>
+                <div class="fw-semibold">{{ printer.model }}</div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="text-uppercase text-muted small mb-1">Cidade</div>
+                <div class="fw-semibold">{{ printer.city|default_if_none:""|default:"-" }}</div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="text-uppercase text-muted small mb-1">Setor</div>
+                <div class="fw-semibold">{{ printer.sector|default_if_none:""|default:"-" }}</div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="text-uppercase text-muted small mb-1">Local</div>
+                <div class="fw-semibold">{{ printer.location|default_if_none:""|default:"-" }}</div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="text-uppercase text-muted small mb-1">Instalada em</div>
+                <div class="fw-semibold">{% if printer.installed_at %}{{ printer.installed_at|date:"d/m/Y" }}{% else %}-{% endif %}</div>
+            </div>
+            <div class="col-12">
+                <div class="text-uppercase text-muted small mb-1">Observacoes</div>
+                <div class="fw-semibold">{{ printer.notes|default_if_none:""|default:"-" }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if installation_history %}
+    <div class="page-section mt-4">
+        <h3 class="h5 mb-3">Historico de locais instalados</h3>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Cidade</th>
+                        <th>Local</th>
+                        <th>Setor</th>
+                        <th>Instalada em</th>
+                        <th>Retirada em</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for item in installation_history %}
+                    <tr>
+                        <td>{{ item.city }}</td>
+                        <td>{{ item.location_name }}</td>
+                        <td>{{ item.sector.name }}</td>
+                        <td>{% if item.installed_at %}{{ item.installed_at|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                        <td>{% if item.removed_at %}{{ item.removed_at|date:"d/m/Y" }}{% else %}<span class="text-success">Instalada</span>{% endif %}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endif %}
+
+{% if maintenance_history %}
+    <div class="page-section mt-4">
+        <h3 class="h5 mb-3">Historico de manutencoes</h3>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Status</th>
+                        <th>Origem</th>
+                        <th>Defeito informado</th>
+                        <th>Solucao aplicada</th>
+                        <th>Local da manutencao</th>
+                        <th>Entrada</th>
+                        <th>Saida</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for record in maintenance_history %}
+                    <tr>
+                        <td>{{ record.status_display_name }}</td>
+                        <td>
+                            <div>{{ record.origin_city|default_if_none:""|default:"-" }}</div>
+                            <div class="small text-muted">{{ record.origin_sector.name|default_if_none:""|default:"-" }}</div>
+                        </td>
+                        <td class="text-break">{{ record.defect_description|linebreaksbr }}</td>
+                        <td class="text-break">
+                            {% if record.solution_description %}
+                                {{ record.solution_description|linebreaksbr }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.maintenance_provider %}
+                                <div>{{ record.maintenance_provider.supplier_name }}</div>
+                                <div class="small text-muted">{{ record.maintenance_provider.city }}/{{ record.maintenance_provider.state }}</div>
+                            {% else %}
+                                <div>{{ record.get_maintenance_location_type_display|default:"-" }}</div>
+                                {% if record.maintenance_location_details %}
+                                    <div class="small text-muted">{{ record.maintenance_location_details }}</div>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td>{{ record.started_at|date:"d/m/Y" }}</td>
+                        <td>
+                            {% if record.finished_at %}
+                                {{ record.finished_at|date:"d/m/Y" }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

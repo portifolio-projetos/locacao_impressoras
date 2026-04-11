@@ -1,0 +1,233 @@
+{% extends "printers/base.html" %}
+
+{% block title %}{% if record %}Atualizar{% else %}Registrar{% endif %} manutencao · Locacao de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+            <h2 class="h4 mb-1">{% if record %}Atualizar manutencao{% else %}Registrar manutencao{% endif %}</h2>
+            <p class="text-muted mb-0">Selecione um status cadastrado e um local de manutencao ja registrado.</p>
+        </div>
+        <div class="d-flex flex-column flex-md-row gap-2">
+            <a href="{% url 'printers:maintenance-status-list' %}" class="btn btn-outline-primary">Cadastrar status</a>
+            <a href="{% url 'printers:maintenance-provider-list' %}" class="btn btn-outline-primary">Cadastrar local de manutencao</a>
+            <a href="{% url 'printers:maintenance-list' %}" class="btn btn-outline-secondary">Voltar para lista</a>
+        </div>
+    </div>
+</div>
+
+{% if selected_printer %}
+    <div class="alert alert-info d-flex justify-content-between align-items-start gap-3">
+        <div>
+            <div class="fw-semibold">Impressora {{ selected_printer.serial_number|default:"—" }}</div>
+            <div class="small text-muted">{{ selected_printer.model }}</div>
+        </div>
+        <div class="text-end small text-muted">
+            <div>Cidade: {{ selected_printer.city|default:"—" }}</div>
+            <div>Setor: {{ selected_printer.sector|default:"—" }}</div>
+            <div>Local: {{ selected_printer.location|default:"—" }}</div>
+        </div>
+    </div>
+{% endif %}
+
+{% if record %}
+    <div class="alert alert-secondary small">
+        Origem registrada: {{ record.origin_city }} · {{ record.origin_sector.name|default:"—" }}
+    </div>
+{% endif %}
+
+{% if not record %}
+<form method="get" class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label" for="filter-city">Filtrar por cidade</label>
+                <select class="form-select" id="filter-city" name="city">
+                    <option value="">Todas as cidades</option>
+                    {% for city in cities %}
+                        <option value="{{ city.id }}" {% if selected_city_id|default:"" == city.id|stringformat:"s" %}selected{% endif %}>{{ city.name }}{% if city.state %}/{{ city.state }}{% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-5">
+                <label class="form-label" for="filter-sector">Filtrar por setor/local</label>
+                <select class="form-select" id="filter-sector" name="sector" {% if not selected_city %}disabled{% endif %}>
+                    <option value="">Todos os setores</option>
+                    {% for sector in sector_options %}
+                        <option value="{{ sector.id }}" {% if selected_sector_id|default:"" == sector.id|stringformat:"s" %}selected{% endif %}>
+                            {{ sector.name }}{% if sector.location %} · {{ sector.location }}{% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if selected_printer %}
+                <input type="hidden" name="printer" value="{{ selected_printer.id }}">
+            {% endif %}
+            <div class="col-12 col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-outline-primary flex-grow-1">Aplicar filtros</button>
+                <a href="{% url 'printers:maintenance-create' %}" class="btn btn-outline-secondary" title="Limpar filtros">Limpar</a>
+            </div>
+        </div>
+    </div>
+</form>
+{% endif %}
+
+<form method="post" class="card border-0 shadow-sm" action="{{ form_action_query }}">
+    <div class="card-body">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="row g-3">
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.printer.id_for_label }}">Impressora</label>
+                {{ form.printer }}
+                {% for error in form.printer.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.status_catalog.id_for_label }}">Status</label>
+                {{ form.status_catalog }}
+                {% for error in form.status_catalog.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="{{ form.defect_description.id_for_label }}">Defeito informado</label>
+                {{ form.defect_description }}
+                {% for error in form.defect_description.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 d-none" id="solutionFieldWrapper">
+                <label class="form-label" for="{{ form.solution_description.id_for_label }}">Solucao aplicada</label>
+                {{ form.solution_description }}
+                <div class="form-text">Descreva o que foi feito para corrigir a impressora e liberar o equipamento.</div>
+                {% for error in form.solution_description.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-lg-5">
+                <label class="form-label" for="{{ form.maintenance_provider.id_for_label }}">Local da manutencao</label>
+                {{ form.maintenance_provider }}
+                <div class="form-text">Selecione um local cadastrado para carregar os dados do fornecedor.</div>
+                {% for error in form.maintenance_provider.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-lg-7">
+                <div class="card bg-light border-0 h-100">
+                    <div class="card-body">
+                        <div class="text-uppercase text-muted small mb-2">Dados do local de manutencao</div>
+                        <div id="providerSummary" class="small text-muted">Selecione um local para visualizar o fornecedor, endereco e contato.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.started_at.id_for_label }}">Data de entrada</label>
+                {{ form.started_at }}
+                <div class="form-text">Datas futuras ficam bloqueadas.</div>
+                {% for error in form.started_at.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.finished_at.id_for_label }}">Data de saida</label>
+                {{ form.finished_at }}
+                <div class="form-text">Preencha apenas quando a impressora retornar disponivel.</div>
+                {% for error in form.finished_at.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="card-footer d-flex flex-column flex-md-row gap-2 justify-content-md-between">
+        <a href="{% url 'printers:maintenance-list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary ms-md-auto">Salvar</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+{{ maintenance_providers|json_script:"maintenance-providers-data" }}
+{{ maintenance_statuses|json_script:"maintenance-statuses-data" }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const providerSelect = document.getElementById('id_maintenance_provider');
+    const providerSummary = document.getElementById('providerSummary');
+    const providerDataElement = document.getElementById('maintenance-providers-data');
+    const statusDataElement = document.getElementById('maintenance-statuses-data');
+    const statusSelect = document.getElementById('id_status_catalog');
+    const solutionFieldWrapper = document.getElementById('solutionFieldWrapper');
+    const solutionField = document.getElementById('id_solution_description');
+
+    if (!providerSelect || !providerSummary || !providerDataElement || !statusDataElement || !statusSelect || !solutionFieldWrapper || !solutionField) {
+        return;
+    }
+
+    const providers = JSON.parse(providerDataElement.textContent || '[]');
+    const statuses = JSON.parse(statusDataElement.textContent || '[]');
+    const providerMap = {};
+    const statusMap = {};
+    providers.forEach((item) => {
+        providerMap[String(item.id)] = item;
+    });
+    statuses.forEach((item) => {
+        statusMap[String(item.id)] = item;
+    });
+
+    const escapeHtml = (value) => {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
+
+    const renderProvider = () => {
+        const selectedId = providerSelect.value;
+        const provider = providerMap[selectedId];
+
+        if (!provider) {
+            providerSummary.className = 'small text-muted';
+            providerSummary.textContent = 'Selecione um local para visualizar o fornecedor, endereco e contato.';
+            return;
+        }
+
+        const lines = [
+            `<div class="fw-semibold text-dark">${escapeHtml(provider.supplier_name)}</div>`,
+            `<div class="mt-2"><strong>Endereco:</strong> ${escapeHtml(provider.address)}</div>`,
+            `<div><strong>Bairro:</strong> ${escapeHtml(provider.neighborhood || '—')}</div>`,
+            `<div><strong>Cidade/UF:</strong> ${escapeHtml(provider.city)}/${escapeHtml(provider.state)}</div>`,
+            `<div><strong>Telefone:</strong> ${escapeHtml(provider.phone || '—')}</div>`,
+            `<div><strong>Responsavel:</strong> ${escapeHtml(provider.contact_name || '—')}</div>`
+        ];
+
+        providerSummary.className = 'small text-dark';
+        providerSummary.innerHTML = lines.join('');
+    };
+
+    const toggleSolutionField = () => {
+        const selectedValue = statusSelect.value;
+        const selectedStatus = statusMap[selectedValue];
+        const shouldShow = selectedStatus && selectedStatus.flow === 'completed';
+        solutionFieldWrapper.classList.toggle('d-none', !shouldShow);
+        if (!shouldShow) {
+            solutionField.value = '';
+        }
+    };
+
+    providerSelect.addEventListener('change', renderProvider);
+    statusSelect.addEventListener('change', toggleSolutionField);
+    renderProvider();
+    toggleSolutionField();
+});
+</script>
+{% endblock %}

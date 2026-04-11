@@ -1,0 +1,62 @@
+{% extends "printers/base.html" %}
+
+{% block title %}Setores · Locação de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+            <h2 class="h4 mb-1">Cadastros base de setores</h2>
+            <p class="text-muted mb-0">Cadastre primeiro os nomes base dos setores e dos locais. Depois você faz os vínculos quando precisar.</p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                    <div>
+                        <h3 class="h5 mb-1">Setores base</h3>
+                        <p class="text-muted mb-0">Cadastre nomes como Recepção, Enfermagem, RH e Compras sem vincular em cidade ou local.</p>
+                    </div>
+                    <span class="chip">{{ sector_catalog_count }}</span>
+                </div>
+                <div class="d-grid gap-2 d-md-flex">
+                    <a href="{% url 'printers:sector-catalog-list' %}" class="btn btn-primary">Abrir setores base</a>
+                    <a href="{% url 'printers:sector-catalog-create' %}" class="btn btn-outline-primary">Novo setor base</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                    <div>
+                        <h3 class="h5 mb-1">Locais de base</h3>
+                        <p class="text-muted mb-0">Cadastre nomes como Prefeitura Municipal, Secretaria de Saúde e Secretaria de Educação sem vincular em cidade.</p>
+                    </div>
+                    <span class="chip">{{ location_catalog_count }}</span>
+                </div>
+                <div class="d-grid gap-2 d-md-flex">
+                    <a href="{% url 'printers:location-catalog-list' %}" class="btn btn-success">Abrir locais de base</a>
+                    <a href="{% url 'printers:location-catalog-create' %}" class="btn btn-outline-success">Novo local de base</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-section mt-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+            <h3 class="h5 mb-1">Vínculos de cidade/local/setor</h3>
+            <p class="text-muted mb-0">Quando quiser montar a estrutura final por cidade, faça os vínculos aqui.</p>
+        </div>
+        <a href="{% url 'printers:sector-binding-list' %}" class="btn btn-outline-secondary">Abrir vínculos</a>
+    </div>
+</div>
+{% endblock %}

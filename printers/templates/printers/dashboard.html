@@ -1,0 +1,92 @@
+{% extends "printers/base.html" %}
+
+{% block title %}Dashboard · Locação de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-start">
+        <div>
+            <h2 class="h4 mb-1 d-flex align-items-center gap-2"><i class="bi bi-grid-1x2-fill text-primary"></i>Visão geral</h2>
+            <p class="text-muted mb-0">Acompanhe os principais indicadores da rede de impressoras locadas.</p>
+        </div>
+        <a href="{% url 'printers:printer-create' %}" class="btn btn-success px-3 py-2"><i class="bi bi-plus-circle"></i> Cadastrar impressora</a>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm position-relative h-100">
+                <div class="card-body">
+                    <p class="text-uppercase text-muted small mb-1 d-flex align-items-center gap-1"><i class="bi bi-printer"></i>Total de impressoras</p>
+                    <h3 class="fw-semibold mb-0">{{ total_printers }}</h3>
+                    <p class="text-muted small mb-0">Quantidade cadastrada no sistema</p>
+                    <a href="{% url 'printers:printer-list' %}" class="stretched-link" aria-label="Ver lista de impressoras"></a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm position-relative h-100">
+                <div class="card-body">
+                    <p class="text-uppercase text-muted small mb-1 d-flex align-items-center gap-1"><i class="bi bi-geo-alt"></i>Cidades atendidas</p>
+                    <h3 class="fw-semibold mb-0">{{ cities|length }}</h3>
+                    <p class="text-muted small mb-0">Locais com contratos ativos</p>
+                    <a href="{% url 'printers:city-list' %}" class="stretched-link" aria-label="Ver cidades cadastradas"></a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm position-relative h-100">
+                <div class="card-body">
+                    <p class="text-uppercase text-muted small mb-1 d-flex align-items-center gap-1"><i class="bi bi-grid"></i>Modelos disponíveis</p>
+                    <h3 class="fw-semibold mb-0">{{ models|length }}</h3>
+                    <p class="text-muted small mb-0">Catálogo de equipamentos</p>
+                    <a href="{% url 'printers:model-list' %}" class="stretched-link" aria-label="Ver modelos cadastrados"></a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm position-relative h-100">
+                <div class="card-body">
+                    <p class="text-uppercase text-muted small mb-1 d-flex align-items-center gap-1"><i class="bi bi-tools"></i>Em manutenção</p>
+                    <h3 class="fw-semibold mb-0">{{ maintenance_in_progress }}</h3>
+                    <p class="text-muted small mb-0">Unidades aguardando retorno</p>
+                    <p class="text-muted small mb-0 mt-2">{{ maintenance_completed_this_month }} retorno(s) concluído(s) neste mês.</p>
+                    <a href="{% url 'printers:maintenance-list' %}" class="stretched-link" aria-label="Ver manutenções em andamento"></a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="page-section h-100">
+            <h3 class="h5 mb-3 d-flex align-items-center gap-2"><i class="bi bi-map text-primary"></i>Distribuição por cidade</h3>
+            <ul class="list-group list-group-flush">
+                {% for city in cities %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ city.name }}{% if city.state %}/{{ city.state }}{% endif %}</span>
+                        <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill">{{ city.printer_count }} impressoras</span>
+                    </li>
+                {% empty %}
+                    <li class="list-group-item text-muted">Nenhuma cidade cadastrada.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="page-section h-100">
+            <h3 class="h5 mb-3 d-flex align-items-center gap-2"><i class="bi bi-diagram-3 text-primary"></i>Distribuição por modelo</h3>
+            <ul class="list-group list-group-flush">
+                {% for printer_model in models %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ printer_model }}</span>
+                        <span class="badge bg-info-subtle text-info-emphasis rounded-pill">{{ printer_model.printer_count }} unidades</span>
+                    </li>
+                {% empty %}
+                    <li class="list-group-item text-muted">Nenhum modelo cadastrado.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

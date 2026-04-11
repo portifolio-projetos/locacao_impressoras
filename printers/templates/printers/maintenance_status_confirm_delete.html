@@ -1,0 +1,21 @@
+{% extends "printers/base.html" %}
+
+{% block title %}Excluir Status de manutencao · Locacao de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <h2 class="h4 mb-1">Excluir status de manutencao</h2>
+    <p class="text-muted mb-0">Confirme a remocao do status {{ status_item.name }}.</p>
+</div>
+
+<form method="post" class="card border-0 shadow-sm">
+    <div class="card-body">
+        {% csrf_token %}
+        <p class="mb-0">Se esse status ja estiver em uso em manutencoes, a exclusao nao sera permitida.</p>
+    </div>
+    <div class="card-footer d-flex gap-2 justify-content-end">
+        <a href="{% url 'printers:maintenance-status-list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-danger">Excluir</button>
+    </div>
+</form>
+{% endblock %}

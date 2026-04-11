@@ -1,0 +1,47 @@
+{% extends "printers/base.html" %}
+
+{% block title %}Modelos · Locação de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+            <h2 class="h4 mb-1">Modelos de impressora</h2>
+            <p class="text-muted mb-0">Organize o catálogo de equipamentos disponíveis para locação.</p>
+        </div>
+        <a href="{% url 'printers:model-create' %}" class="btn btn-success">Novo modelo</a>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Nome</th>
+                <th>Fabricante</th>
+                <th>Impressoras</th>
+                <th class="text-end">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for model in models %}
+            <tr>
+                <td>{{ model.name }}</td>
+                <td>{{ model.manufacturer|default:"—" }}</td>
+                <td><span class="chip">{{ model.printer_count }}</span></td>
+                <td class="text-end">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a href="{% url 'printers:model-update' model.id %}" class="btn btn-outline-primary">Editar</a>
+                        <a href="{% url 'printers:model-delete' model.id %}" class="btn btn-outline-danger">Excluir</a>
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="4" class="text-center text-muted">Nenhum modelo cadastrado.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

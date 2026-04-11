@@ -1,0 +1,58 @@
+{% extends "printers/base.html" %}
+
+{% block title %}Locais de manutencao · Locacao de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+            <h2 class="h4 mb-1">Locais de manutencao</h2>
+            <p class="text-muted mb-0">Cadastre fornecedores e oficinas para reutilizar no registro das manutencoes.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'printers:maintenance-list' %}" class="btn btn-outline-secondary">Voltar</a>
+            <a href="{% url 'printers:maintenance-provider-create' %}" class="btn btn-success">Novo local</a>
+        </div>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Fornecedor</th>
+                <th>Cidade/UF</th>
+                <th>Telefone</th>
+                <th>Responsavel</th>
+                <th class="text-end">Acoes</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for item in providers %}
+            <tr>
+                <td>
+                    <div class="fw-semibold">{{ item.supplier_name }}</div>
+                    <div class="small text-muted">{{ item.address }}</div>
+                    {% if item.neighborhood %}
+                        <div class="small text-muted">{{ item.neighborhood }}</div>
+                    {% endif %}
+                </td>
+                <td>{{ item.city }}/{{ item.state }}</td>
+                <td>{{ item.phone|default:"—" }}</td>
+                <td>{{ item.contact_name|default:"—" }}</td>
+                <td class="text-end">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a href="{% url 'printers:maintenance-provider-update' item.id %}" class="btn btn-outline-primary">Editar</a>
+                        <a href="{% url 'printers:maintenance-provider-delete' item.id %}" class="btn btn-outline-danger">Excluir</a>
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5" class="text-center text-muted">Nenhum local de manutencao cadastrado.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

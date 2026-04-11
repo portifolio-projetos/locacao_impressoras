@@ -1,0 +1,49 @@
+{% extends "printers/base.html" %}
+
+{% block title %}Cidades · Locação de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+            <h2 class="h4 mb-1">Cidades atendidas</h2>
+            <p class="text-muted mb-0">Cadastre e acompanhe os contratos por município.</p>
+        </div>
+        <a href="{% url 'printers:city-create' %}" class="btn btn-success">Nova cidade</a>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Nome</th>
+                <th>UF</th>
+                <th>Setores</th>
+                <th>Impressoras</th>
+                <th class="text-end">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for city in cities %}
+            <tr>
+                <td>{{ city.name }}</td>
+                <td>{{ city.state|default:"—" }}</td>
+                <td><span class="chip">{{ city.sector_count }}</span></td>
+                <td><span class="chip">{{ city.printer_count }}</span></td>
+                <td class="text-end">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a href="{% url 'printers:city-update' city.id %}" class="btn btn-outline-primary">Editar</a>
+                        <a href="{% url 'printers:city-delete' city.id %}" class="btn btn-outline-danger">Excluir</a>
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5" class="text-center text-muted">Nenhuma cidade cadastrada.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

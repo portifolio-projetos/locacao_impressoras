@@ -1,0 +1,44 @@
+{% extends "printers/base.html" %}
+
+{% block title %}{% if status_item %}Editar{% else %}Novo{% endif %} Status de manutencao · Locacao de Impressoras{% endblock %}
+
+{% block content %}
+<div class="page-section mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+            <h2 class="h4 mb-1">{% if status_item %}Editar status de manutencao{% else %}Novo status de manutencao{% endif %}</h2>
+            <p class="text-muted mb-0">Escolha o nome do status e se ele representa manutencao em aberto ou equipamento disponivel.</p>
+        </div>
+        <a href="{% url 'printers:maintenance-status-list' %}" class="btn btn-outline-secondary">Voltar para lista</a>
+    </div>
+</div>
+
+<form method="post" class="card border-0 shadow-sm">
+    <div class="card-body">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="row g-3">
+            <div class="col-12 col-md-7">
+                <label class="form-label" for="{{ form.name.id_for_label }}">Nome do status</label>
+                {{ form.name }}
+                {% for error in form.name.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-5">
+                <label class="form-label" for="{{ form.flow.id_for_label }}">Tipo do status</label>
+                {{ form.flow }}
+                {% for error in form.flow.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="card-footer d-flex flex-column flex-md-row gap-2 justify-content-md-between">
+        <a href="{% url 'printers:maintenance-status-list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary ms-md-auto">Salvar</button>
+    </div>
+</form>
+{% endblock %}
