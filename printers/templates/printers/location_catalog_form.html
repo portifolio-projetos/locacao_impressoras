@@ -1,13 +1,13 @@
 {% extends "printers/base.html" %}
 
-{% block title %}{% if location_catalog_item %}Editar{% else %}Novo{% endif %} Local Base · Locação de Impressoras{% endblock %}
+{% block title %}{% if location_catalog_item %}Editar{% else %}Novo{% endif %} Local Base - Locação de Impressoras{% endblock %}
 
 {% block content %}
 <div class="page-section mb-4">
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
         <div>
             <h2 class="h4 mb-1">{% if location_catalog_item %}Editar local base{% else %}Novo local base{% endif %}</h2>
-            <p class="text-muted mb-0">Cadastre apenas o nome do local, sem cidade e sem setor.</p>
+            <p class="text-muted mb-0">Cadastre o nome do local base e, se desejar, o endereço e a localização.</p>
         </div>
         <a href="{% url 'printers:location-catalog-list' %}" class="btn btn-outline-secondary">Voltar para lista</a>
     </div>
@@ -31,6 +31,53 @@
                     <div class="invalid-feedback d-block">{{ error }}</div>
                 {% endfor %}
             </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label" for="{{ form.city.id_for_label }}">Cidade</label>
+                {{ form.city }}
+                <div class="form-text">Cidade cadastrada na tela de cidades.</div>
+                {% for error in form.city.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="col-12 col-md-8">
+                <label class="form-label" for="{{ form.address.id_for_label }}">Endereço (rua/av, número)</label>
+                {{ form.address }}
+                {% for error in form.address.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label" for="{{ form.phone.id_for_label }}">Telefone</label>
+                {{ form.phone }}
+                <div class="form-text">Opcional.</div>
+                {% for error in form.phone.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label" for="{{ form.neighborhood.id_for_label }}">Bairro</label>
+                {{ form.neighborhood }}
+                {% for error in form.neighborhood.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label class="form-label" for="{{ form.zip_code.id_for_label }}">CEP</label>
+                {{ form.zip_code }}
+                {% for error in form.zip_code.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="col-12 col-md-8">
+                <label class="form-label" for="{{ form.location_url.id_for_label }}">Link de localização</label>
+                {{ form.location_url }}
+                <div class="form-text">Opcional: link do Google Maps, Waze ou outro app.</div>
+                {% for error in form.location_url.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
         </div>
     </div>
     <div class="card-footer d-flex flex-column flex-md-row gap-2 justify-content-md-between">
@@ -38,4 +85,53 @@
         <button type="submit" class="btn btn-primary ms-md-auto">Salvar</button>
     </div>
 </form>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const cepInput = document.getElementById('id_zip_code');
+    const phoneInput = document.getElementById('id_phone');
+
+    const applyMask = () => {
+        if (!cepInput) return;
+        const digits = (cepInput.value || '').replace(/\D/g, '').slice(0, 8);
+        cepInput.value = digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
+    };
+
+    const applyPhoneMask = () => {
+        if (!phoneInput) return;
+        const digits = (phoneInput.value || '').replace(/\D/g, '').slice(0, 11);
+        if (!digits) {
+            phoneInput.value = '';
+            return;
+        }
+        if (digits.length <= 2) {
+            phoneInput.value = `(${digits}`;
+            return;
+        }
+        if (digits.length <= 6) {
+            phoneInput.value = `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+            return;
+        }
+        if (digits.length <= 10) {
+            phoneInput.value = `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+            return;
+        }
+        phoneInput.value = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    };
+
+    if (cepInput) {
+        cepInput.addEventListener('input', applyMask);
+        cepInput.addEventListener('blur', applyMask);
+    }
+    if (phoneInput) {
+        phoneInput.addEventListener('input', applyPhoneMask);
+        phoneInput.addEventListener('blur', applyPhoneMask);
+    }
+    applyMask();
+    applyPhoneMask();
+});
+</script>
 {% endblock %}

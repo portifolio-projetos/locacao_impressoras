@@ -42,10 +42,15 @@ from .models import (
 
 def _build_sector_metadata():
     sector_locations = {}
+    sector_addresses = {}
     sector_choices = {}
     location_choices = {}
     sectors_by_location = {}
     sector_name_catalog = list(SectorCatalog.objects.order_by("name").values_list("name", flat=True))
+    location_catalog_map = {
+        f"{item.city_id}:{item.name.lower()}": (item.address or "")
+        for item in LocationCatalog.objects.select_related("city")
+    }
 
     for location in Location.objects.select_related("city").order_by("city__name", "name"):
         location_choices.setdefault(str(location.city_id), []).append(
@@ -59,6 +64,8 @@ def _build_sector_metadata():
         "city__name", "location__name", "name"
     ):
         sector_locations[str(sector.id)] = sector.location.name
+        address_key = f"{sector.city_id}:{sector.location.name.lower()}"
+        sector_addresses[str(sector.id)] = location_catalog_map.get(address_key, "")
         sector_choices.setdefault(str(sector.city_id), []).append(
             {
                 "id": str(sector.id),
@@ -73,7 +80,14 @@ def _build_sector_metadata():
                 "name": sector.name,
             }
         )
-    return sector_locations, sector_choices, location_choices, sectors_by_location, sector_name_catalog
+    return (
+        sector_locations,
+        sector_addresses,
+        sector_choices,
+        location_choices,
+        sectors_by_location,
+        sector_name_catalog,
+    )
 
 
 def _build_sector_binding_preview():
@@ -84,6 +98,22 @@ def _build_sector_binding_preview():
         key = f"{sector.city_id}:{sector.location.name.lower()}"
         bindings.setdefault(key, []).append(sector.name)
     return bindings
+
+
+def _build_location_catalog_metadata():
+    metadata = {}
+    for item in LocationCatalog.objects.select_related("city").order_by("name"):
+        metadata[str(item.id)] = {
+            "name": item.name,
+            "city_id": str(item.city_id) if item.city_id else "",
+            "city_name": item.city.name if item.city_id else "",
+            "address": item.address or "",
+            "phone": item.phone or "",
+            "neighborhood": item.neighborhood or "",
+            "zip_code": item.zip_code or "",
+            "location_url": item.location_url or "",
+        }
+    return metadata
 
 
 @login_required
@@ -206,7 +236,7 @@ def printer_list(request):
 
 @login_required
 def printer_create(request):
-    sector_locations, sector_choices, _, _, _ = _build_sector_metadata()
+    sector_locations, sector_addresses, sector_choices, _, _, _ = _build_sector_metadata()
     initial: dict[str, object] = {}
     city_param = request.GET.get("city")
     sector_param = request.GET.get("sector")
@@ -284,6 +314,7 @@ def printer_create(request):
         {
             "form": form,
             "sector_locations": sector_locations,
+            "sector_addresses": sector_addresses,
             "sector_choices": sector_choices,
             "form_action_query": form_action_query,
         },
@@ -293,7 +324,7 @@ def printer_create(request):
 @login_required
 def printer_update(request, pk):
     printer = get_object_or_404(Printer, pk=pk)
-    sector_locations, sector_choices, _, _, _ = _build_sector_metadata()
+    sector_locations, sector_addresses, sector_choices, _, _, _ = _build_sector_metadata()
     if request.method == "POST":
         form = PrinterForm(request.POST, instance=printer)
         if form.is_valid():
@@ -308,6 +339,7 @@ def printer_update(request, pk):
             "form": form,
             "printer": printer,
             "sector_locations": sector_locations,
+            "sector_addresses": sector_addresses,
             "sector_choices": sector_choices,
             "form_action_query": "",
         },
@@ -319,6 +351,13 @@ def printer_detail(request, pk):
     printer = get_object_or_404(
         Printer.objects.select_related("model", "city", "sector"), pk=pk
     )
+    location_catalog_item = None
+    if printer.city_id and printer.location:
+        location_catalog_item = (
+            LocationCatalog.objects.select_related("city")
+            .filter(city_id=printer.city_id, name__iexact=printer.location)
+            .first()
+        )
     installation_history = (
         printer.installation_history.select_related("city", "sector", "sector__location")
         .order_by("-installed_at", "-created_at")
@@ -334,6 +373,7 @@ def printer_detail(request, pk):
         "printers/printer_detail.html",
         {
             "printer": printer,
+            "location_catalog_item": location_catalog_item,
             "installation_history": installation_history,
             "maintenance_history": maintenance_history,
         },
@@ -455,7 +495,7 @@ def sector_catalog_delete(request, pk):
 
 @login_required
 def location_catalog_list(request):
-    location_catalog = LocationCatalog.objects.order_by("name")
+    location_catalog = LocationCatalog.objects.select_related("city").order_by("city__name", "name")
     return render(
         request,
         "printers/location_catalog_list.html",
@@ -552,6 +592,7 @@ def sector_binding_list(request):
 @login_required
 def sector_create(request):
     existing_bindings = _build_sector_binding_preview()
+    location_catalog_metadata = _build_location_catalog_metadata()
     if request.method == "POST":
         form = SectorForm(request.POST)
         if form.is_valid():
@@ -563,7 +604,11 @@ def sector_create(request):
     return render(
         request,
         "printers/sector_form.html",
-        {"form": form, "existing_bindings": existing_bindings},
+        {
+            "form": form,
+            "existing_bindings": existing_bindings,
+            "location_catalog_metadata": location_catalog_metadata,
+        },
     )
 
 
@@ -571,6 +616,7 @@ def sector_create(request):
 def sector_update(request, pk):
     sector = get_object_or_404(Sector.objects.select_related("location"), pk=pk)
     existing_bindings = _build_sector_binding_preview()
+    location_catalog_metadata = _build_location_catalog_metadata()
     if request.method == "POST":
         form = SectorForm(request.POST, instance=sector)
         if form.is_valid():
@@ -582,7 +628,12 @@ def sector_update(request, pk):
     return render(
         request,
         "printers/sector_form.html",
-        {"form": form, "sector": sector, "existing_bindings": existing_bindings},
+        {
+            "form": form,
+            "sector": sector,
+            "existing_bindings": existing_bindings,
+            "location_catalog_metadata": location_catalog_metadata,
+        },
     )
 
 

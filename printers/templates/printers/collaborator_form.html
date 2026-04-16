@@ -85,3 +85,38 @@
     </div>
 </form>
 {% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const phoneInput = document.getElementById('id_phone');
+    if (!phoneInput) return;
+
+    const applyPhoneMask = () => {
+        const digits = (phoneInput.value || '').replace(/\D/g, '').slice(0, 11);
+        if (!digits) {
+            phoneInput.value = '';
+            return;
+        }
+        if (digits.length <= 2) {
+            phoneInput.value = `(${digits}`;
+            return;
+        }
+        if (digits.length <= 6) {
+            phoneInput.value = `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+            return;
+        }
+        if (digits.length <= 10) {
+            phoneInput.value = `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+            return;
+        }
+        phoneInput.value = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    };
+
+    phoneInput.addEventListener('input', applyPhoneMask);
+    phoneInput.addEventListener('blur', applyPhoneMask);
+    applyPhoneMask();
+});
+</script>
+{% endblock %}

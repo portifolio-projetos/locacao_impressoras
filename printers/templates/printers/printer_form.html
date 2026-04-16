@@ -172,6 +172,17 @@
                 {% endfor %}
             </div>
             <div class="col-12 col-md-6">
+                <label class="form-label" for="id_location_address">Endereço do local</label>
+                <input
+                    type="text"
+                    id="id_location_address"
+                    class="form-control bg-light"
+                    value=""
+                    readonly
+                    placeholder="Preenchido automaticamente quando houver endereço cadastrado"
+                >
+            </div>
+            <div class="col-12 col-md-6">
                 <label class="form-label" for="{{ form.installed_at.id_for_label }}">Data e hora de instalação</label>
                 {{ form.installed_at }}
                 {% for error in form.installed_at.errors %}
@@ -225,12 +236,16 @@
 {% block extra_scripts %}
 {{ block.super }}
 {{ sector_locations|json_script:"sector-locations-data" }}
+{{ sector_addresses|json_script:"sector-addresses-data" }}
 {{ sector_choices|json_script:"sector-choices-data" }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const installedAtInput = document.getElementById('id_installed_at');
     const sectorSelect = document.getElementById('id_sector');
     const locationInput = document.getElementById('id_location');
+    const locationAddressInput = document.getElementById('id_location_address');
     const dataElement = document.getElementById('sector-locations-data');
+    const addressDataElement = document.getElementById('sector-addresses-data');
     const choiceElement = document.getElementById('sector-choices-data');
     const citySelect = document.getElementById('id_city');
     const scannerButtons = Array.from(document.querySelectorAll('.js-open-scanner'));
@@ -247,12 +262,40 @@ document.addEventListener('DOMContentLoaded', function () {
     const scannerImageInput = document.getElementById('scannerImageInput');
     const scannerModal = scannerModalElement ? new bootstrap.Modal(scannerModalElement) : null;
 
-    if (!sectorSelect || !locationInput || !dataElement || !choiceElement || !citySelect) {
+    if (!sectorSelect || !locationInput || !dataElement || !addressDataElement || !choiceElement || !citySelect) {
         return;
     }
 
     const mapping = JSON.parse(dataElement.textContent || '{}');
+    const addressMapping = JSON.parse(addressDataElement.textContent || '{}');
     const choices = JSON.parse(choiceElement.textContent || '{}');
+
+    const toDatetimeLocalMinute = (date) => {
+        const d = new Date(date);
+        d.setSeconds(0, 0);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mi = String(d.getMinutes()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+    };
+
+    const refreshInstalledAtMax = () => {
+        if (!installedAtInput) {
+            return;
+        }
+        const maxValue = toDatetimeLocalMinute(new Date());
+        installedAtInput.max = maxValue;
+    };
+
+    if (installedAtInput) {
+        ['focus', 'click', 'input', 'change'].forEach((eventName) => {
+            installedAtInput.addEventListener(eventName, refreshInstalledAtMax);
+        });
+        refreshInstalledAtMax();
+        window.setInterval(refreshInstalledAtMax, 15000);
+    }
 
     const populateSectors = () => {
         const selectedCity = citySelect.value || '';
@@ -290,8 +333,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const sectorId = sectorSelect.value;
         if (sectorId && Object.prototype.hasOwnProperty.call(mapping, sectorId)) {
             locationInput.value = mapping[sectorId] || '';
+            if (locationAddressInput) {
+                locationAddressInput.value = addressMapping[sectorId] || '';
+            }
         } else {
             locationInput.value = '';
+            if (locationAddressInput) {
+                locationAddressInput.value = '';
+            }
         }
     };
 

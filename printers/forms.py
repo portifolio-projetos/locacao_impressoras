@@ -4,6 +4,8 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.db.models import Q
 from django.db import transaction
 from django.utils import timezone
+from urllib.parse import quote
+import re
 
 from .models import (
     City,
@@ -22,7 +24,7 @@ from .models import (
 
 
 class BootstrapFormMixin:
-    """Aplica classes Bootstrap padrao as entradas de formulario."""
+    """Aplica classes Bootstrap padrão às entradas de formulário."""
 
     bootstrap_input_class = "form-control"
     bootstrap_select_class = "form-select"
@@ -40,6 +42,22 @@ class BootstrapFormMixin:
             widget.attrs["class"] = classes
 
 
+def _normalize_state(value: str) -> str:
+    letters = re.sub(r"[^A-Za-z]", "", (value or "").strip()).upper()
+    return letters[:2]
+
+
+def _normalize_phone(value: str) -> str:
+    digits = re.sub(r"\D", "", (value or "").strip())
+    if not digits:
+        return ""
+    if len(digits) == 10:
+        return f"({digits[:2]}) {digits[2:6]}-{digits[6:]}"
+    if len(digits) == 11:
+        return f"({digits[:2]}) {digits[2:7]}-{digits[7:]}"
+    return digits
+
+
 class CityForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = City
@@ -47,7 +65,17 @@ class CityForm(BootstrapFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["state"].widget.attrs["maxlength"] = 2
+        self.fields["state"].widget.attrs["placeholder"] = "UF"
+        self.fields["state"].widget.attrs["style"] = "text-transform:uppercase"
         self._apply_bootstrap_styles()
+
+    def clean_state(self):
+        value = self.cleaned_data.get("state", "")
+        normalized = _normalize_state(value)
+        if value and len(normalized) != 2:
+            raise forms.ValidationError("Informe uma UF válida com 2 letras.")
+        return normalized
 
 
 class SectorCatalogForm(BootstrapFormMixin, forms.ModelForm):
@@ -64,12 +92,55 @@ class SectorCatalogForm(BootstrapFormMixin, forms.ModelForm):
 class LocationCatalogForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = LocationCatalog
-        fields = ["name"]
+        fields = ["name", "city", "address", "phone", "neighborhood", "zip_code", "location_url"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["name"].widget.attrs["placeholder"] = "Ex.: Prefeitura Municipal, Secretaria de Saude"
+        self.fields["name"].widget.attrs["placeholder"] = "Ex.: Prefeitura Municipal, Secretaria de Saúde"
+        self.fields["city"].required = True
+        self.fields["city"].queryset = City.objects.order_by("name")
+        self.fields["address"].required = False
+        self.fields["phone"].required = False
+        self.fields["neighborhood"].required = False
+        self.fields["zip_code"].required = False
+        self.fields["location_url"].required = False
+        self.fields["address"].widget.attrs["placeholder"] = "Rua/Av, número"
+        self.fields["phone"].widget.attrs["placeholder"] = "(99) 99999-9999"
+        self.fields["phone"].widget.attrs["maxlength"] = 15
+        self.fields["phone"].widget.attrs["inputmode"] = "numeric"
+        self.fields["neighborhood"].widget.attrs["placeholder"] = "Bairro"
+        self.fields["zip_code"].widget.attrs["placeholder"] = "CEP"
+        self.fields["zip_code"].widget.attrs["maxlength"] = 9
+        self.fields["zip_code"].widget.attrs["inputmode"] = "numeric"
+        self.fields["zip_code"].widget.attrs["pattern"] = r"\d{5}-\d{3}"
+        self.fields["location_url"].widget.attrs["placeholder"] = "Link de localização (Waze, Google Maps...)"
         self._apply_bootstrap_styles()
+
+    def clean_zip_code(self):
+        value = (self.cleaned_data.get("zip_code") or "").strip()
+        if not value:
+            return ""
+        digits = re.sub(r"\D", "", value)
+        if len(digits) != 8:
+            raise forms.ValidationError("Informe um CEP válido no formato 99999-999.")
+        return f"{digits[:5]}-{digits[5:]}"
+
+    def clean_location_url(self):
+        value = (self.cleaned_data.get("location_url") or "").strip()
+        if not value:
+            return ""
+        if value.lower().startswith(("http://", "https://")):
+            return value
+        return f"https://www.google.com/maps/search/?api=1&query={quote(value)}"
+
+    def clean_phone(self):
+        value = self.cleaned_data.get("phone", "")
+        normalized = _normalize_phone(value)
+        if normalized:
+            digits = re.sub(r"\D", "", normalized)
+            if len(digits) not in (10, 11):
+                raise forms.ValidationError("Informe um telefone válido com DDD.")
+        return normalized
 
 
 class SectorForm(BootstrapFormMixin, forms.ModelForm):
@@ -80,7 +151,7 @@ class SectorForm(BootstrapFormMixin, forms.ModelForm):
     )
     location_base = forms.ModelChoiceField(
         label="Local",
-        queryset=LocationCatalog.objects.order_by("name"),
+        queryset=LocationCatalog.objects.none(),
         empty_label="Selecione um local de base",
     )
 
@@ -95,6 +166,10 @@ class SectorForm(BootstrapFormMixin, forms.ModelForm):
         location_base = cleaned_data.get("location_base")
 
         if not city or not sector_base or not location_base:
+            return cleaned_data
+
+        if location_base.city_id and location_base.city_id != city.id:
+            self.add_error("location_base", "Este local base pertence a outra cidade.")
             return cleaned_data
 
         existing_sector = (
@@ -114,16 +189,32 @@ class SectorForm(BootstrapFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["city"].required = True
+        self.fields["location_base"].required = True
+
+        selected_city_id = None
+        if self.is_bound:
+            city_value = self.data.get(self.add_prefix("city"))
+            if city_value:
+                selected_city_id = city_value
+        elif self.instance and self.instance.pk and self.instance.city_id:
+            selected_city_id = self.instance.city_id
 
         if self.instance and self.instance.pk:
             sector_base = SectorCatalog.objects.filter(name__iexact=self.instance.name).first()
             location_base = LocationCatalog.objects.filter(
+                city_id=self.instance.city_id,
                 name__iexact=self.instance.location.name
             ).first()
             if sector_base:
                 self.initial["sector_base"] = sector_base
             if location_base:
                 self.initial["location_base"] = location_base
+
+        location_queryset = LocationCatalog.objects.select_related("city")
+        if selected_city_id:
+            location_queryset = location_queryset.filter(city_id=selected_city_id)
+        self.fields["location_base"].queryset = location_queryset.order_by("name")
+        self.fields["location_base"].label_from_instance = self._location_base_label
 
         self._apply_bootstrap_styles()
 
@@ -141,6 +232,14 @@ class SectorForm(BootstrapFormMixin, forms.ModelForm):
             instance.save()
             self.save_m2m()
         return instance
+
+    @staticmethod
+    def _location_base_label(location_base: LocationCatalog) -> str:
+        if location_base.address and location_base.neighborhood:
+            return f"{location_base.name} - {location_base.address} - {location_base.neighborhood}"
+        if location_base.address:
+            return f"{location_base.name} - {location_base.address}"
+        return location_base.name
 
 
 class PrinterModelForm(BootstrapFormMixin, forms.ModelForm):
@@ -181,13 +280,32 @@ class MaintenanceProviderForm(BootstrapFormMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["supplier_name"].widget.attrs["placeholder"] = "Nome do fornecedor"
         self.fields["address"].widget.attrs["placeholder"] = "Endereco"
-        self.fields["phone"].widget.attrs["placeholder"] = "Telefone"
+        self.fields["phone"].widget.attrs["placeholder"] = "(99) 99999-9999"
+        self.fields["phone"].widget.attrs["maxlength"] = 15
+        self.fields["phone"].widget.attrs["inputmode"] = "numeric"
         self.fields["city"].widget.attrs["placeholder"] = "Cidade"
         self.fields["state"].widget.attrs["placeholder"] = "UF"
         self.fields["state"].widget.attrs["maxlength"] = 2
+        self.fields["state"].widget.attrs["style"] = "text-transform:uppercase"
         self.fields["neighborhood"].widget.attrs["placeholder"] = "Bairro"
         self.fields["contact_name"].widget.attrs["placeholder"] = "Nome do responsavel"
         self._apply_bootstrap_styles()
+
+    def clean_state(self):
+        value = self.cleaned_data.get("state", "")
+        normalized = _normalize_state(value)
+        if len(normalized) != 2:
+            raise forms.ValidationError("Informe uma UF válida com 2 letras.")
+        return normalized
+
+    def clean_phone(self):
+        value = self.cleaned_data.get("phone", "")
+        normalized = _normalize_phone(value)
+        if normalized:
+            digits = re.sub(r"\D", "", normalized)
+            if len(digits) not in (10, 11):
+                raise forms.ValidationError("Informe um telefone válido com DDD.")
+        return normalized
 
 
 class PrinterForm(BootstrapFormMixin, forms.ModelForm):
@@ -335,7 +453,6 @@ class PrinterForm(BootstrapFormMixin, forms.ModelForm):
         self.fields["sector"].required = True
         self.fields["sector"].label_from_instance = self._sector_label
         self.fields["installed_at"].input_formats = ["%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M"]
-        self.fields["installed_at"].widget.attrs["max"] = timezone.localtime().replace(second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M")
         if self.instance and self.instance.pk and self.instance.installed_at:
             self.initial["installed_at"] = timezone.localtime(self.instance.installed_at).strftime("%Y-%m-%dT%H:%M")
         self._apply_bootstrap_styles()
@@ -449,9 +566,6 @@ class PrinterMaintenanceForm(BootstrapFormMixin, forms.ModelForm):
         self.fields["solution_description"].required = False
         self.fields["started_at"].input_formats = ["%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M"]
         self.fields["finished_at"].input_formats = ["%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M"]
-        max_datetime = timezone.localtime().replace(second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M")
-        self.fields["started_at"].widget.attrs["max"] = max_datetime
-        self.fields["finished_at"].widget.attrs["max"] = max_datetime
 
         if instance and instance.pk:
             if instance.started_at:
@@ -602,6 +716,9 @@ class CollaboratorForm(BootstrapFormMixin, forms.ModelForm):
                 "autocomplete": "new-password",
             }
         )
+        self.fields["phone"].widget.attrs["placeholder"] = "(99) 99999-9999"
+        self.fields["phone"].widget.attrs["maxlength"] = 15
+        self.fields["phone"].widget.attrs["inputmode"] = "numeric"
         if user_id := getattr(user, "id", None):
             self.fields["login"].initial = user.username
             self.fields["password"].required = False
@@ -623,6 +740,15 @@ class CollaboratorForm(BootstrapFormMixin, forms.ModelForm):
         if not password and not getattr(self.instance, "user_id", None):
             raise forms.ValidationError("Informe uma senha para o acesso do colaborador.")
         return password
+
+    def clean_phone(self):
+        value = self.cleaned_data.get("phone", "")
+        normalized = _normalize_phone(value)
+        if normalized:
+            digits = re.sub(r"\D", "", normalized)
+            if len(digits) not in (10, 11):
+                raise forms.ValidationError("Informe um telefone válido com DDD.")
+        return normalized
 
     @transaction.atomic
     def save(self, commit=True):

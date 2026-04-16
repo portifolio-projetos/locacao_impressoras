@@ -45,3 +45,24 @@
     </div>
 </form>
 {% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const ufInput = document.getElementById('id_state');
+    if (!ufInput) return;
+
+    const applyUfMask = () => {
+        ufInput.value = (ufInput.value || '')
+            .replace(/[^a-zA-Z]/g, '')
+            .toUpperCase()
+            .slice(0, 2);
+    };
+
+    ufInput.addEventListener('input', applyUfMask);
+    ufInput.addEventListener('blur', applyUfMask);
+    applyUfMask();
+});
+</script>
+{% endblock %}

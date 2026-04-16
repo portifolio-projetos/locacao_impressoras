@@ -49,6 +49,16 @@
                 <div class="fw-semibold">{{ printer.location|default_if_none:""|default:"-" }}</div>
             </div>
             <div class="col-12 col-md-6">
+                <div class="text-uppercase text-muted small mb-1">Endereço do local</div>
+                <div class="fw-semibold">
+                    {% if location_catalog_item and location_catalog_item.address %}
+                        {{ location_catalog_item.address }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
                 <div class="text-uppercase text-muted small mb-1">Instalada em</div>
                 <div class="fw-semibold">{% if printer.installed_at %}{{ printer.installed_at|date:"d/m/Y H:i" }}{% else %}-{% endif %}</div>
             </div>
@@ -63,6 +73,7 @@
 {% if installation_history %}
     <div class="page-section mt-4">
         <h3 class="h5 mb-3">Histórico de locais instalados</h3>
+        <p class="text-muted small mb-3">Cada linha representa uma movimentação da impressora. O histórico é cumulativo e mostra toda a vida do equipamento.</p>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
@@ -70,6 +81,7 @@
                         <th>Cidade</th>
                         <th>Local</th>
                         <th>Setor</th>
+                        <th>Status</th>
                         <th>Instalada em</th>
                         <th>Retirada em</th>
                         <th>Registro de instalação</th>
@@ -82,14 +94,21 @@
                         <td>{{ item.city }}</td>
                         <td>{{ item.location_name }}</td>
                         <td>{{ item.sector.name }}</td>
+                        <td>
+                            {% if item.removed_at %}
+                                <span class="text-muted">Encerrada</span>
+                            {% else %}
+                                <span class="text-success">Em uso atualmente</span>
+                            {% endif %}
+                        </td>
                         <td>{% if item.installed_at %}{{ item.installed_at|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td>
-                        <td>{% if item.removed_at %}{{ item.removed_at|date:"d/m/Y H:i" }}{% else %}<span class="text-success">Instalada</span>{% endif %}</td>
+                        <td>{% if item.removed_at %}{{ item.removed_at|date:"d/m/Y H:i" }}{% else %}<span class="text-muted">Ainda não retirada</span>{% endif %}</td>
                         <td>{{ item.created_at|date:"d/m/Y H:i:s" }}</td>
                         <td>
                             {% if item.removed_at %}
                                 {{ item.updated_at|date:"d/m/Y H:i:s" }}
                             {% else %}
-                                <span class="text-muted">-</span>
+                                <span class="text-muted">Sem retirada</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -103,6 +122,7 @@
 {% if maintenance_history %}
     <div class="page-section mt-4">
         <h3 class="h5 mb-3">Histórico de manutenções</h3>
+        <p class="text-muted small mb-3">Todas as manutenções ficam registradas no histórico do equipamento.</p>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">

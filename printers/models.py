@@ -40,14 +40,29 @@ class SectorCatalog(models.Model):
 
 
 class LocationCatalog(models.Model):
-    name = models.CharField(max_length=120, unique=True)
+    name = models.CharField(max_length=120)
+    city = models.ForeignKey(
+        City,
+        related_name="location_catalog_items",
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
+    )
+    address = models.CharField(max_length=180, blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    neighborhood = models.CharField(max_length=100, blank=True)
+    zip_code = models.CharField(max_length=20, blank=True)
+    location_url = models.CharField(max_length=255, blank=True)
 
     class Meta:
-        ordering = ["name"]
+        ordering = ["city__name", "name"]
         verbose_name = "Local base"
         verbose_name_plural = "Locais base"
+        unique_together = ("city", "name")
 
     def __str__(self) -> str:
+        if self.city_id:
+            return f"{self.name} ({self.city})"
         return self.name
 
 

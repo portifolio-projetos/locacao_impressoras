@@ -31,8 +31,9 @@ class LocationAdmin(admin.ModelAdmin):
 
 @admin.register(LocationCatalog)
 class LocationCatalogAdmin(admin.ModelAdmin):
-    list_display = ("name",)
-    search_fields = ("name",)
+    list_display = ("name", "city", "address", "phone", "neighborhood", "zip_code")
+    list_filter = ("city",)
+    search_fields = ("name", "city__name", "address", "phone", "neighborhood", "zip_code", "location_url")
 
 
 @admin.register(SectorCatalog)

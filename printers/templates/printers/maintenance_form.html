@@ -159,6 +159,8 @@
 {{ maintenance_statuses|json_script:"maintenance-statuses-data" }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const startedAtInput = document.getElementById('id_started_at');
+    const finishedAtInput = document.getElementById('id_finished_at');
     const providerSelect = document.getElementById('id_maintenance_provider');
     const providerSummary = document.getElementById('providerSummary');
     const providerDataElement = document.getElementById('maintenance-providers-data');
@@ -181,6 +183,27 @@ document.addEventListener('DOMContentLoaded', function () {
     statuses.forEach((item) => {
         statusMap[String(item.id)] = item;
     });
+
+    const toDatetimeLocalMinute = (date) => {
+        const d = new Date(date);
+        d.setSeconds(0, 0);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mi = String(d.getMinutes()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+    };
+
+    const refreshDateMax = () => {
+        const maxValue = toDatetimeLocalMinute(new Date());
+        if (startedAtInput) {
+            startedAtInput.max = maxValue;
+        }
+        if (finishedAtInput) {
+            finishedAtInput.max = maxValue;
+        }
+    };
 
     const escapeHtml = (value) => {
         return String(value || '')
@@ -226,6 +249,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     providerSelect.addEventListener('change', renderProvider);
     statusSelect.addEventListener('change', toggleSolutionField);
+
+    [startedAtInput, finishedAtInput].forEach((input) => {
+        if (!input) {
+            return;
+        }
+        ['focus', 'click', 'input', 'change'].forEach((eventName) => {
+            input.addEventListener(eventName, refreshDateMax);
+        });
+    });
+
+    refreshDateMax();
+    window.setInterval(refreshDateMax, 15000);
     renderProvider();
     toggleSolutionField();
 });
