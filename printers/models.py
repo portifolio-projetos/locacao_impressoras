@@ -141,7 +141,7 @@ class Printer(models.Model):
         null=True,
     )
     location = models.CharField(max_length=120, blank=True)
-    installed_at = models.DateField(blank=True, null=True)
+    installed_at = models.DateTimeField(blank=True, null=True)
     notes = models.TextField(blank=True)
 
     class Meta:
@@ -151,8 +151,8 @@ class Printer(models.Model):
         if bool(self.city_id) ^ bool(self.sector_id):
             raise ValidationError("Cidade e setor devem ser informados juntos.")
 
-        if self.installed_at and self.installed_at > timezone.localdate():
-            raise ValidationError("A data de instalacao nao pode ser maior que a data de hoje.")
+        if self.installed_at and self.installed_at > timezone.now():
+            raise ValidationError("A data de instalacao nao pode ser maior que a data atual.")
 
         if self.sector and self.city and self.sector.city_id != self.city_id:
             raise ValidationError("O setor selecionado nao pertence a cidade informada.")
@@ -191,8 +191,8 @@ class PrinterInstallationHistory(models.Model):
         on_delete=models.PROTECT,
     )
     location_name = models.CharField(max_length=120)
-    installed_at = models.DateField(blank=True, null=True)
-    removed_at = models.DateField(blank=True, null=True)
+    installed_at = models.DateTimeField(blank=True, null=True)
+    removed_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -252,8 +252,8 @@ class PrinterMaintenance(models.Model):
         choices=MaintenanceLocation.choices,
     )
     maintenance_location_details = models.CharField(max_length=120, blank=True)
-    started_at = models.DateField()
-    finished_at = models.DateField(blank=True, null=True)
+    started_at = models.DateTimeField()
+    finished_at = models.DateTimeField(blank=True, null=True)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
@@ -278,11 +278,11 @@ class PrinterMaintenance(models.Model):
         if self.finished_at and self.started_at and self.finished_at < self.started_at:
             raise ValidationError("A data de saida nao pode ser anterior a data de entrada.")
 
-        if self.started_at and self.started_at > timezone.localdate():
-            raise ValidationError("A data de entrada nao pode ser maior que a data de hoje.")
+        if self.started_at and self.started_at > timezone.now():
+            raise ValidationError("A data de entrada nao pode ser maior que a data atual.")
 
-        if self.finished_at and self.finished_at > timezone.localdate():
-            raise ValidationError("A data de saida nao pode ser maior que a data de hoje.")
+        if self.finished_at and self.finished_at > timezone.now():
+            raise ValidationError("A data de saida nao pode ser maior que a data atual.")
 
         if self.current_status_flow == self.Status.COMPLETED and not self.finished_at:
             raise ValidationError("Informe a data de saida para marcar a manutencao como concluida.")

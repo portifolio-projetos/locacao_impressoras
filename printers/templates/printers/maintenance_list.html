@@ -1,6 +1,6 @@
 {% extends "printers/base.html" %}
 
-{% block title %}Manutencoes · Locacao de Impressoras{% endblock %}
+{% block title %}Manutenções · Locação de Impressoras{% endblock %}
 
 {% block extra_head %}
 {{ block.super }}
@@ -69,8 +69,8 @@
 <div class="page-section mb-4">
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
         <div>
-            <h2 class="h4 mb-1 d-flex align-items-center gap-2"><i class="bi bi-tools text-primary"></i>Manutencoes de impressoras</h2>
-            <p class="text-muted mb-0">Controle as unidades em manutencao e acompanhe o retorno para disponibilidade.</p>
+            <h2 class="h4 mb-1 d-flex align-items-center gap-2"><i class="bi bi-tools text-primary"></i>Manutenções de impressoras</h2>
+            <p class="text-muted mb-0">Controle as unidades em manutenção e acompanhe o retorno para disponibilidade.</p>
         </div>
         <div class="maintenance-quick-actions">
             <a href="{% url 'printers:maintenance-status-list' %}" class="btn btn-outline-primary"><i class="bi bi-clipboard2-pulse"></i> Status ({{ status_count }})</a>
@@ -84,7 +84,7 @@
             <a href="{% url 'printers:maintenance-list' %}?status={{ status_enum.IN_PROGRESS }}"
                 class="btn btn-outline-primary {% if status_filter == status_enum.IN_PROGRESS %}active{% endif %}"
                 {% if status_filter == status_enum.IN_PROGRESS %}aria-current="page"{% endif %}>
-                <i class="bi bi-hourglass-split"></i> Em manutencao
+                <i class="bi bi-hourglass-split"></i> Em manutenção
             </a>
             <a href="{% url 'printers:maintenance-list' %}?status={{ status_enum.COMPLETED }}"
                 class="btn btn-outline-primary {% if status_filter == status_enum.COMPLETED %}active{% endif %}"
@@ -100,15 +100,15 @@
     <table class="table table-hover align-middle">
         <thead class="table-light">
             <tr>
-                <th>Nº de serie</th>
+                <th>Nº de série</th>
                 <th>Modelo</th>
                 <th>Origem</th>
                 <th>Defeito informado</th>
-                <th>Solucao aplicada</th>
-                <th>Local da manutencao</th>
+                <th>Solução aplicada</th>
+                <th>Local da manutenção</th>
                 <th>Entrada</th>
-                <th>Saida</th>
-                <th class="text-end">Acoes</th>
+                <th>Saída</th>
+                <th class="text-end">Ações</th>
             </tr>
         </thead>
         <tbody>
@@ -145,10 +145,10 @@
                         {% endif %}
                     {% endif %}
                 </td>
-                <td class="maintenance-date">{{ record.started_at|date:"d/m/Y" }}</td>
+                <td class="maintenance-date">{{ record.started_at|date:"d/m/Y H:i" }}</td>
                 <td class="maintenance-date">
                     {% if record.finished_at %}
-                        {{ record.finished_at|date:"d/m/Y" }}
+                        {{ record.finished_at|date:"d/m/Y H:i" }}
                     {% else %}
                         <span class="text-muted">—</span>
                     {% endif %}
@@ -173,9 +173,9 @@
 {% else %}
     <div class="alert alert-info" role="alert">
         {% if status_filter == status_enum.IN_PROGRESS %}
-            Nenhuma impressora esta em manutencao no momento.
+            Nenhuma impressora está em manutenção no momento.
         {% else %}
-            Nao ha registros de manutencoes concluidas com o filtro atual.
+            Não há registros de manutenções concluídas com o filtro atual.
         {% endif %}
     </div>
 {% endif %}

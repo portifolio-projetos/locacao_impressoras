@@ -1,17 +1,17 @@
 {% extends "printers/base.html" %}
 
-{% block title %}{% if record %}Atualizar{% else %}Registrar{% endif %} manutencao · Locacao de Impressoras{% endblock %}
+{% block title %}{% if record %}Atualizar{% else %}Registrar{% endif %} manutenção · Locação de Impressoras{% endblock %}
 
 {% block content %}
 <div class="page-section mb-4">
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
         <div>
-            <h2 class="h4 mb-1">{% if record %}Atualizar manutencao{% else %}Registrar manutencao{% endif %}</h2>
-            <p class="text-muted mb-0">Selecione um status cadastrado e um local de manutencao ja registrado.</p>
+            <h2 class="h4 mb-1">{% if record %}Atualizar manutenção{% else %}Registrar manutenção{% endif %}</h2>
+            <p class="text-muted mb-0">Selecione um status cadastrado e um local de manutenção já registrado.</p>
         </div>
         <div class="d-flex flex-column flex-md-row gap-2">
             <a href="{% url 'printers:maintenance-status-list' %}" class="btn btn-outline-primary">Cadastrar status</a>
-            <a href="{% url 'printers:maintenance-provider-list' %}" class="btn btn-outline-primary">Cadastrar local de manutencao</a>
+            <a href="{% url 'printers:maintenance-provider-list' %}" class="btn btn-outline-primary">Cadastrar local de manutenção</a>
             <a href="{% url 'printers:maintenance-list' %}" class="btn btn-outline-secondary">Voltar para lista</a>
         </div>
     </div>
@@ -105,7 +105,7 @@
                 {% endfor %}
             </div>
             <div class="col-12 d-none" id="solutionFieldWrapper">
-                <label class="form-label" for="{{ form.solution_description.id_for_label }}">Solucao aplicada</label>
+                <label class="form-label" for="{{ form.solution_description.id_for_label }}">Solução aplicada</label>
                 {{ form.solution_description }}
                 <div class="form-text">Descreva o que foi feito para corrigir a impressora e liberar o equipamento.</div>
                 {% for error in form.solution_description.errors %}
@@ -113,7 +113,7 @@
                 {% endfor %}
             </div>
             <div class="col-12 col-lg-5">
-                <label class="form-label" for="{{ form.maintenance_provider.id_for_label }}">Local da manutencao</label>
+                <label class="form-label" for="{{ form.maintenance_provider.id_for_label }}">Local da manutenção</label>
                 {{ form.maintenance_provider }}
                 <div class="form-text">Selecione um local cadastrado para carregar os dados do fornecedor.</div>
                 {% for error in form.maintenance_provider.errors %}
@@ -123,23 +123,23 @@
             <div class="col-12 col-lg-7">
                 <div class="card bg-light border-0 h-100">
                     <div class="card-body">
-                        <div class="text-uppercase text-muted small mb-2">Dados do local de manutencao</div>
-                        <div id="providerSummary" class="small text-muted">Selecione um local para visualizar o fornecedor, endereco e contato.</div>
+                        <div class="text-uppercase text-muted small mb-2">Dados do local de manutenção</div>
+                        <div id="providerSummary" class="small text-muted">Selecione um local para visualizar o fornecedor, endereço e contato.</div>
                     </div>
                 </div>
             </div>
             <div class="col-12 col-md-6">
-                <label class="form-label" for="{{ form.started_at.id_for_label }}">Data de entrada</label>
+                <label class="form-label" for="{{ form.started_at.id_for_label }}">Data e hora de entrada</label>
                 {{ form.started_at }}
-                <div class="form-text">Datas futuras ficam bloqueadas.</div>
+                <div class="form-text">Datas e horários futuros ficam bloqueados.</div>
                 {% for error in form.started_at.errors %}
                     <div class="invalid-feedback d-block">{{ error }}</div>
                 {% endfor %}
             </div>
             <div class="col-12 col-md-6">
-                <label class="form-label" for="{{ form.finished_at.id_for_label }}">Data de saida</label>
+                <label class="form-label" for="{{ form.finished_at.id_for_label }}">Data e hora de saída</label>
                 {{ form.finished_at }}
-                <div class="form-text">Preencha apenas quando a impressora retornar disponivel.</div>
+                <div class="form-text">Preencha apenas quando a impressora retornar disponível.</div>
                 {% for error in form.finished_at.errors %}
                     <div class="invalid-feedback d-block">{{ error }}</div>
                 {% endfor %}
@@ -197,17 +197,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!provider) {
             providerSummary.className = 'small text-muted';
-            providerSummary.textContent = 'Selecione um local para visualizar o fornecedor, endereco e contato.';
+            providerSummary.textContent = 'Selecione um local para visualizar o fornecedor, endereço e contato.';
             return;
         }
 
         const lines = [
             `<div class="fw-semibold text-dark">${escapeHtml(provider.supplier_name)}</div>`,
-            `<div class="mt-2"><strong>Endereco:</strong> ${escapeHtml(provider.address)}</div>`,
+            `<div class="mt-2"><strong>Endereço:</strong> ${escapeHtml(provider.address)}</div>`,
             `<div><strong>Bairro:</strong> ${escapeHtml(provider.neighborhood || '—')}</div>`,
             `<div><strong>Cidade/UF:</strong> ${escapeHtml(provider.city)}/${escapeHtml(provider.state)}</div>`,
             `<div><strong>Telefone:</strong> ${escapeHtml(provider.phone || '—')}</div>`,
-            `<div><strong>Responsavel:</strong> ${escapeHtml(provider.contact_name || '—')}</div>`
+            `<div><strong>Responsável:</strong> ${escapeHtml(provider.contact_name || '—')}</div>`
         ];
 
         providerSummary.className = 'small text-dark';

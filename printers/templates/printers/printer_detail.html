@@ -1,12 +1,12 @@
 {% extends "printers/base.html" %}
 
-{% block title %}{{ printer.serial_number|default:"Impressora" }} · Locacao de Impressoras{% endblock %}
+{% block title %}{{ printer.serial_number|default:"Impressora" }} · Locação de Impressoras{% endblock %}
 
 {% block content %}
 <div class="page-section mb-4">
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
         <div>
-            <h2 class="h4 mb-1">Impressora {{ printer.serial_number|default:"sem numero de serie" }}</h2>
+            <h2 class="h4 mb-1">Impressora {{ printer.serial_number|default:"sem número de série" }}</h2>
             <p class="text-muted mb-0">{{ printer.model }}{% if printer.city %} instalada em {{ printer.city }}{% endif %}.</p>
         </div>
         <div class="d-flex flex-column flex-md-row gap-2">
@@ -21,15 +21,15 @@
     <div class="card-body">
         <div class="row g-4">
             <div class="col-12 col-md-6">
-                <div class="text-uppercase text-muted small mb-1">Numero de serie</div>
+                <div class="text-uppercase text-muted small mb-1">Número de série</div>
                 <div class="fw-semibold">{{ printer.serial_number|default_if_none:""|default:"-" }}</div>
             </div>
             <div class="col-12 col-md-6">
-                <div class="text-uppercase text-muted small mb-1">Patrimonio</div>
+                <div class="text-uppercase text-muted small mb-1">Patrimônio</div>
                 <div class="fw-semibold">{{ printer.patrimony_number|default_if_none:""|default:"-" }}</div>
             </div>
             <div class="col-12 col-md-6">
-                <div class="text-uppercase text-muted small mb-1">Codigo de barras</div>
+                <div class="text-uppercase text-muted small mb-1">Código de barras</div>
                 <div class="fw-semibold">{{ printer.barcode|default_if_none:""|default:"-" }}</div>
             </div>
             <div class="col-12 col-md-6">
@@ -50,10 +50,10 @@
             </div>
             <div class="col-12 col-md-6">
                 <div class="text-uppercase text-muted small mb-1">Instalada em</div>
-                <div class="fw-semibold">{% if printer.installed_at %}{{ printer.installed_at|date:"d/m/Y" }}{% else %}-{% endif %}</div>
+                <div class="fw-semibold">{% if printer.installed_at %}{{ printer.installed_at|date:"d/m/Y H:i" }}{% else %}-{% endif %}</div>
             </div>
             <div class="col-12">
-                <div class="text-uppercase text-muted small mb-1">Observacoes</div>
+                <div class="text-uppercase text-muted small mb-1">Observações</div>
                 <div class="fw-semibold">{{ printer.notes|default_if_none:""|default:"-" }}</div>
             </div>
         </div>
@@ -62,7 +62,7 @@
 
 {% if installation_history %}
     <div class="page-section mt-4">
-        <h3 class="h5 mb-3">Historico de locais instalados</h3>
+        <h3 class="h5 mb-3">Histórico de locais instalados</h3>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
@@ -72,6 +72,8 @@
                         <th>Setor</th>
                         <th>Instalada em</th>
                         <th>Retirada em</th>
+                        <th>Registro de instalação</th>
+                        <th>Registro de retirada</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,8 +82,16 @@
                         <td>{{ item.city }}</td>
                         <td>{{ item.location_name }}</td>
                         <td>{{ item.sector.name }}</td>
-                        <td>{% if item.installed_at %}{{ item.installed_at|date:"d/m/Y" }}{% else %}-{% endif %}</td>
-                        <td>{% if item.removed_at %}{{ item.removed_at|date:"d/m/Y" }}{% else %}<span class="text-success">Instalada</span>{% endif %}</td>
+                        <td>{% if item.installed_at %}{{ item.installed_at|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td>
+                        <td>{% if item.removed_at %}{{ item.removed_at|date:"d/m/Y H:i" }}{% else %}<span class="text-success">Instalada</span>{% endif %}</td>
+                        <td>{{ item.created_at|date:"d/m/Y H:i:s" }}</td>
+                        <td>
+                            {% if item.removed_at %}
+                                {{ item.updated_at|date:"d/m/Y H:i:s" }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
                     </tr>
                 {% endfor %}
                 </tbody>
@@ -92,7 +102,7 @@
 
 {% if maintenance_history %}
     <div class="page-section mt-4">
-        <h3 class="h5 mb-3">Historico de manutencoes</h3>
+        <h3 class="h5 mb-3">Histórico de manutenções</h3>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
@@ -100,10 +110,12 @@
                         <th>Status</th>
                         <th>Origem</th>
                         <th>Defeito informado</th>
-                        <th>Solucao aplicada</th>
-                        <th>Local da manutencao</th>
+                        <th>Solução aplicada</th>
+                        <th>Local da manutenção</th>
                         <th>Entrada</th>
-                        <th>Saida</th>
+                        <th>Saída</th>
+                        <th>Registro</th>
+                        <th>Última atualização</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -133,14 +145,16 @@
                                 {% endif %}
                             {% endif %}
                         </td>
-                        <td>{{ record.started_at|date:"d/m/Y" }}</td>
+                        <td>{{ record.started_at|date:"d/m/Y H:i" }}</td>
                         <td>
                             {% if record.finished_at %}
-                                {{ record.finished_at|date:"d/m/Y" }}
+                                {{ record.finished_at|date:"d/m/Y H:i" }}
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
+                        <td>{{ record.created_at|date:"d/m/Y H:i:s" }}</td>
+                        <td>{{ record.updated_at|date:"d/m/Y H:i:s" }}</td>
                     </tr>
                 {% endfor %}
                 </tbody>

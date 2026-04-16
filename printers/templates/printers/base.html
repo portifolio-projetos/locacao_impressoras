@@ -146,45 +146,15 @@
             display: none !important;
         }
 
-        .mobile-nav {
-            position: fixed;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 1030;
-            background: rgba(255, 255, 255, 0.96);
-            border-top: 1px solid rgba(23, 50, 74, 0.12);
-            box-shadow: 0 -10px 26px rgba(12, 71, 122, 0.14);
-            padding: 0.45rem 0.55rem calc(0.55rem + env(safe-area-inset-bottom));
-        }
-
-        .mobile-nav .mobile-link {
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 0.2rem;
-            border-radius: 10px;
-            color: #4f6478;
-            text-decoration: none;
-            font-size: 0.72rem;
-            font-weight: 600;
-            padding: 0.35rem 0.2rem;
-        }
-
-        .mobile-nav .mobile-link.active,
-        .mobile-nav .mobile-link:hover {
+        .app-footer a {
             color: var(--brand-primary);
-            background: var(--brand-soft);
+            font-weight: 600;
+            text-decoration: none;
         }
 
-        .mobile-nav .mobile-link i {
-            font-size: 1.1rem;
-            line-height: 1;
-        }
-
-        .content-wrap {
-            padding-bottom: 5.4rem;
+        .app-footer a:hover,
+        .app-footer a:focus {
+            text-decoration: underline;
         }
 
         @keyframes section-in {
@@ -212,12 +182,6 @@
             .page-section {
                 padding: 1.15rem;
                 border-radius: var(--radius-md);
-            }
-        }
-
-        @media (min-width: 992px) {
-            .content-wrap {
-                padding-bottom: 0;
             }
         }
     </style>
@@ -255,7 +219,7 @@
 </nav>
 {% endif %}
 
-<main class="py-4 py-lg-5 content-wrap">
+<main class="py-4 py-lg-5">
     <div class="container">
         {% if messages %}
             <div class="mb-3">
@@ -271,37 +235,14 @@
     </div>
 </main>
 
-<footer class="bg-white border-top py-3 mt-auto">
+<footer class="app-footer border-top py-3 mt-auto">
     <div class="container text-center text-muted small">
-        © {% now "Y" %} PrintFlow · Gestão inteligente do parque de impressão
+        Desenvolvido por:
+        <a href="https://palmersistemas.com.br/" target="_blank" rel="noopener noreferrer">Palmer Sistemas</a>
     </div>
 </footer>
 
-{% if request.user.is_authenticated %}
-<nav class="mobile-nav d-lg-none" aria-label="Navegação rápida">
-    <div class="container px-1">
-        <div class="row g-1 text-center">
-            <div class="col"><a class="mobile-link" href="{% url 'printers:dashboard' %}"><i class="bi bi-speedometer2"></i><span>Início</span></a></div>
-            <div class="col"><a class="mobile-link" href="{% url 'printers:printer-list' %}"><i class="bi bi-printer"></i><span>Impressoras</span></a></div>
-            <div class="col"><a class="mobile-link" href="{% url 'printers:maintenance-list' %}"><i class="bi bi-tools"></i><span>Serviços</span></a></div>
-            <div class="col"><a class="mobile-link" href="{% url 'printers:city-list' %}"><i class="bi bi-geo-alt"></i><span>Cidades</span></a></div>
-            <div class="col"><a class="mobile-link" href="{% url 'printers:logout' %}"><i class="bi bi-box-arrow-right"></i><span>Sair</span></a></div>
-        </div>
-    </div>
-</nav>
-{% endif %}
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const currentPath = window.location.pathname;
-    document.querySelectorAll('.mobile-link').forEach(link => {
-        if (link.getAttribute('href') === currentPath) {
-            link.classList.add('active');
-        }
-    });
-});
-</script>
 {% block extra_scripts %}{% endblock %}
 </body>
 </html>

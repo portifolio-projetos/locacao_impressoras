@@ -37,6 +37,13 @@ def env_first(*names, default=None):
     return default
 
 
+def env_int(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if value in (None, ""):
+        return default
+    return int(value)
+
+
 def parse_database_url(url: str):
     parsed = urlparse(url)
     if parsed.scheme not in {"postgres", "postgresql"}:
@@ -61,10 +68,17 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-(d8@d!##3p$(o7^elw#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env_bool('DJANGO_DEBUG', True)
 
+allowed_hosts_default = 'localhost,127.0.0.1' if DEBUG else ''
 ALLOWED_HOSTS = [
     host.strip()
-    for host in env_first('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1,*').split(',')
+    for host in env_first('DJANGO_ALLOWED_HOSTS', default=allowed_hosts_default).split(',')
     if host.strip()
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in env_first('DJANGO_CSRF_TRUSTED_ORIGINS', default='').split(',')
+    if origin.strip()
 ]
 
 
@@ -182,3 +196,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = 'printers:login'
 LOGIN_REDIRECT_URL = 'printers:dashboard'
 LOGOUT_REDIRECT_URL = 'printers:login'
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = env_bool('DJANGO_SECURE_SSL_REDIRECT', True)
+    SESSION_COOKIE_SECURE = env_bool('DJANGO_SESSION_COOKIE_SECURE', True)
+    CSRF_COOKIE_SECURE = env_bool('DJANGO_CSRF_COOKIE_SECURE', True)
+    SECURE_CONTENT_TYPE_NOSNIFF = env_bool('DJANGO_SECURE_CONTENT_TYPE_NOSNIFF', True)
+    SECURE_HSTS_SECONDS = env_int('DJANGO_SECURE_HSTS_SECONDS', 31536000)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool('DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS', True)
+    SECURE_HSTS_PRELOAD = env_bool('DJANGO_SECURE_HSTS_PRELOAD', True)

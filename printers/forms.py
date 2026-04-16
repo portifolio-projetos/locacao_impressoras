@@ -207,7 +207,7 @@ class PrinterForm(BootstrapFormMixin, forms.ModelForm):
             "notes",
         ]
         widgets = {
-            "installed_at": forms.DateInput(attrs={"type": "date"}),
+            "installed_at": forms.DateTimeInput(format="%Y-%m-%dT%H:%M", attrs={"type": "datetime-local"}),
             "notes": forms.Textarea(attrs={"rows": 3}),
             "serial_number_scan_text": forms.HiddenInput(),
             "barcode_scan_text": forms.HiddenInput(),
@@ -256,8 +256,8 @@ class PrinterForm(BootstrapFormMixin, forms.ModelForm):
         serial_number_scan_text = cleaned_data.get("serial_number_scan_text")
         barcode_scan_text = cleaned_data.get("barcode_scan_text")
 
-        if installed_at and installed_at > timezone.localdate():
-            self.add_error("installed_at", "A data de instalacao nao pode ser maior que a data de hoje.")
+        if installed_at and installed_at > timezone.now():
+            self.add_error("installed_at", "A data de instalacao nao pode ser maior que a data atual.")
 
         if bool(city) ^ bool(sector):
             if not city:
@@ -334,7 +334,10 @@ class PrinterForm(BootstrapFormMixin, forms.ModelForm):
         self.fields["city"].required = True
         self.fields["sector"].required = True
         self.fields["sector"].label_from_instance = self._sector_label
-        self.fields["installed_at"].widget.attrs["max"] = timezone.localdate().isoformat()
+        self.fields["installed_at"].input_formats = ["%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M"]
+        self.fields["installed_at"].widget.attrs["max"] = timezone.localtime().replace(second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M")
+        if self.instance and self.instance.pk and self.instance.installed_at:
+            self.initial["installed_at"] = timezone.localtime(self.instance.installed_at).strftime("%Y-%m-%dT%H:%M")
         self._apply_bootstrap_styles()
         self.fields["location"].widget.attrs["class"] += " bg-light"
 
@@ -371,7 +374,7 @@ class PrinterForm(BootstrapFormMixin, forms.ModelForm):
         )
 
         if open_history and (assignment_changed or not current_city_id or not current_sector_id):
-            removal_date = instance.installed_at or timezone.localdate()
+            removal_date = instance.installed_at or timezone.now()
             if open_history.installed_at and removal_date and removal_date < open_history.installed_at:
                 removal_date = open_history.installed_at
             open_history.removed_at = removal_date
@@ -396,7 +399,7 @@ class PrinterForm(BootstrapFormMixin, forms.ModelForm):
                 city=instance.city,
                 sector=instance.sector,
                 location_name=current_location,
-                installed_at=instance.installed_at or timezone.localdate(),
+                installed_at=instance.installed_at or timezone.now(),
             )
 
 
@@ -415,8 +418,8 @@ class PrinterMaintenanceForm(BootstrapFormMixin, forms.ModelForm):
         widgets = {
             "defect_description": forms.Textarea(attrs={"rows": 3}),
             "solution_description": forms.Textarea(attrs={"rows": 3}),
-            "started_at": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
-            "finished_at": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "started_at": forms.DateTimeInput(format="%Y-%m-%dT%H:%M", attrs={"type": "datetime-local"}),
+            "finished_at": forms.DateTimeInput(format="%Y-%m-%dT%H:%M", attrs={"type": "datetime-local"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -444,16 +447,17 @@ class PrinterMaintenanceForm(BootstrapFormMixin, forms.ModelForm):
         self.fields["status_catalog"].required = True
         self.fields["maintenance_provider"].required = True
         self.fields["solution_description"].required = False
-        self.fields["started_at"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
-        self.fields["finished_at"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
-        self.fields["started_at"].widget.attrs["max"] = timezone.localdate().isoformat()
-        self.fields["finished_at"].widget.attrs["max"] = timezone.localdate().isoformat()
+        self.fields["started_at"].input_formats = ["%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M"]
+        self.fields["finished_at"].input_formats = ["%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M"]
+        max_datetime = timezone.localtime().replace(second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M")
+        self.fields["started_at"].widget.attrs["max"] = max_datetime
+        self.fields["finished_at"].widget.attrs["max"] = max_datetime
 
         if instance and instance.pk:
             if instance.started_at:
-                self.initial["started_at"] = instance.started_at.isoformat()
+                self.initial["started_at"] = timezone.localtime(instance.started_at).strftime("%Y-%m-%dT%H:%M")
             if instance.finished_at:
-                self.initial["finished_at"] = instance.finished_at.isoformat()
+                self.initial["finished_at"] = timezone.localtime(instance.finished_at).strftime("%Y-%m-%dT%H:%M")
 
         self._apply_bootstrap_styles()
 
@@ -479,11 +483,11 @@ class PrinterMaintenanceForm(BootstrapFormMixin, forms.ModelForm):
         if started_at and finished_at and finished_at < started_at:
             self.add_error("finished_at", "A data de saida nao pode ser anterior a data de entrada.")
 
-        if started_at and started_at > timezone.localdate():
-            self.add_error("started_at", "A data de entrada nao pode ser maior que a data de hoje.")
+        if started_at and started_at > timezone.now():
+            self.add_error("started_at", "A data de entrada nao pode ser maior que a data atual.")
 
-        if finished_at and finished_at > timezone.localdate():
-            self.add_error("finished_at", "A data de saida nao pode ser maior que a data de hoje.")
+        if finished_at and finished_at > timezone.now():
+            self.add_error("finished_at", "A data de saida nao pode ser maior que a data atual.")
 
         if status_catalog and status_catalog.flow == PrinterMaintenance.Status.COMPLETED and not finished_at:
             self.add_error("finished_at", "Informe a data de saida para liberar a impressora.")
@@ -537,7 +541,7 @@ class PrinterMaintenanceForm(BootstrapFormMixin, forms.ModelForm):
                 .first()
             )
             if open_history:
-                removal_date = instance.started_at or timezone.localdate()
+                removal_date = instance.started_at or timezone.now()
                 if open_history.installed_at and removal_date < open_history.installed_at:
                     removal_date = open_history.installed_at
                 open_history.removed_at = removal_date

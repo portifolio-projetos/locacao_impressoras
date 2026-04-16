@@ -172,7 +172,7 @@
                 {% endfor %}
             </div>
             <div class="col-12 col-md-6">
-                <label class="form-label" for="{{ form.installed_at.id_for_label }}">Data de instalação</label>
+                <label class="form-label" for="{{ form.installed_at.id_for_label }}">Data e hora de instalação</label>
                 {{ form.installed_at }}
                 {% for error in form.installed_at.errors %}
                     <div class="invalid-feedback d-block">{{ error }}</div>

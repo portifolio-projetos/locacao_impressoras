@@ -326,7 +326,7 @@ def printer_detail(request, pk):
     )
     maintenance_history = (
         printer.maintenance_records.select_related("origin_city", "origin_sector", "maintenance_provider", "status_catalog")
-        .order_by("-started_at")
+        .order_by("-started_at", "-created_at")
         .all()
     )
     return render(
@@ -759,7 +759,7 @@ def maintenance_create(request):
         if selected_printer:
             initial["printer"] = selected_printer
 
-    initial.setdefault("started_at", date.today())
+    initial.setdefault("started_at", timezone.localtime().replace(second=0, microsecond=0))
 
     form_action_query = ""
     query_params = []
