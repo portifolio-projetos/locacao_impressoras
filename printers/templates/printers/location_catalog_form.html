@@ -1,4 +1,4 @@
-{% extends "printers/base.html" %}
+﻿{% extends "printers/base.html" %}
 
 {% block title %}{% if location_catalog_item %}Editar{% else %}Novo{% endif %} Local Base - Locação de Impressoras{% endblock %}
 
@@ -74,6 +74,12 @@
                 <label class="form-label" for="{{ form.location_url.id_for_label }}">Link de localização</label>
                 {{ form.location_url }}
                 <div class="form-text">Opcional: link do Google Maps, Waze ou outro app.</div>
+                <div class="mt-2 d-flex flex-wrap gap-2">
+                    <button type="button" id="btn-use-current-location" class="btn btn-outline-primary btn-sm">
+                        Usar minha localização atual
+                    </button>
+                    <span id="current-location-feedback" class="small text-muted align-self-center"></span>
+                </div>
                 {% for error in form.location_url.errors %}
                     <div class="invalid-feedback d-block">{{ error }}</div>
                 {% endfor %}
@@ -93,6 +99,9 @@
 document.addEventListener('DOMContentLoaded', function () {
     const cepInput = document.getElementById('id_zip_code');
     const phoneInput = document.getElementById('id_phone');
+    const locationInput = document.getElementById('id_location_url');
+    const locationButton = document.getElementById('btn-use-current-location');
+    const locationFeedback = document.getElementById('current-location-feedback');
 
     const applyMask = () => {
         if (!cepInput) return;
@@ -122,14 +131,73 @@ document.addEventListener('DOMContentLoaded', function () {
         phoneInput.value = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
     };
 
+    const setLocationFeedback = (message, isError = false) => {
+        if (!locationFeedback) return;
+        locationFeedback.textContent = message;
+        locationFeedback.classList.toggle('text-danger', isError);
+        locationFeedback.classList.toggle('text-success', !isError && Boolean(message));
+        if (!message) {
+            locationFeedback.classList.remove('text-success');
+            locationFeedback.classList.add('text-muted');
+            return;
+        }
+        locationFeedback.classList.remove('text-muted');
+    };
+
+    const buildGoogleMapsLink = (latitude, longitude) => {
+        return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+    };
+
     if (cepInput) {
         cepInput.addEventListener('input', applyMask);
         cepInput.addEventListener('blur', applyMask);
     }
+
     if (phoneInput) {
         phoneInput.addEventListener('input', applyPhoneMask);
         phoneInput.addEventListener('blur', applyPhoneMask);
     }
+
+    if (locationButton && locationInput) {
+        locationButton.addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                setLocationFeedback('Geolocalização não suportada neste navegador.', true);
+                return;
+            }
+
+            locationButton.disabled = true;
+            setLocationFeedback('Obtendo localização atual...');
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    locationInput.value = buildGoogleMapsLink(latitude, longitude);
+                    locationInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    locationInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    setLocationFeedback('Localização carregada com sucesso.');
+                    locationButton.disabled = false;
+                },
+                (error) => {
+                    let message = 'Não foi possível obter sua localização.';
+                    if (error && error.code === error.PERMISSION_DENIED) {
+                        message = 'Permissão de localização negada.';
+                    } else if (error && error.code === error.POSITION_UNAVAILABLE) {
+                        message = 'Localização indisponível no momento.';
+                    } else if (error && error.code === error.TIMEOUT) {
+                        message = 'Tempo esgotado ao tentar obter localização.';
+                    }
+                    setLocationFeedback(message, true);
+                    locationButton.disabled = false;
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0,
+                }
+            );
+        });
+    }
+
     applyMask();
     applyPhoneMask();
 });
