@@ -352,6 +352,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let activeField = null;
     let activeMode = null;
     let scanTimer = null;
+    const hasNativeBarcodeSupport = () => ('BarcodeDetector' in window);
 
     const stopScanner = () => {
         if (scanTimer) {
@@ -392,7 +393,20 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!activeField || !value) {
             return;
         }
-        const normalizedValue = value.trim();
+        let normalizedValue = value.trim();
+        if (activeMode === 'ocr') {
+            normalizedValue = normalizedValue
+                .replace(/\s+/g, '')
+                .replace(/[^A-Za-z0-9\-_/]/g, '');
+        }
+        if (activeMode === 'barcode') {
+            normalizedValue = normalizedValue
+                .replace(/\s+/g, '')
+                .replace(/[^A-Za-z0-9\-_.\/]/g, '');
+        }
+        if (!normalizedValue) {
+            return;
+        }
         activeField.value = normalizedValue;
         if (activeField === serialInput && serialScanInput) {
             serialScanInput.value = normalizedValue;
@@ -403,6 +417,110 @@ document.addEventListener('DOMContentLoaded', function () {
         activeField.dispatchEvent(new Event('input', { bubbles: true }));
         activeField.dispatchEvent(new Event('change', { bubbles: true }));
         scannerModal.hide();
+    };
+
+    const extractBestToken = (text, mode) => {
+        const cleanedText = (text || '')
+            .toUpperCase()
+            .replace(/[\r\t]/g, ' ')
+            .replace(/[|]/g, 'I');
+        const tokens = cleanedText
+            .split(/[\n\s]+/)
+            .map((token) => token.replace(/[^A-Z0-9\-_/\.]/g, ''))
+            .filter(Boolean);
+
+        const blocked = new Set([
+            'SERIAL', 'NUMBER', 'NUMERO', 'SERIE', 'SN', 'SNR', 'MODEL', 'MODELO',
+            'CODIGO', 'BARRAS', 'BARCODE', 'PATRIMONIO', 'HP', 'EPSON', 'BROTHER',
+            'CANON', 'SAMSUNG', 'LEXMARK', 'RICOH', 'XEROX'
+        ]);
+
+        let best = '';
+        let bestScore = Number.NEGATIVE_INFINITY;
+        tokens.forEach((token) => {
+            if (token.length < 4 || token.length > 40 || blocked.has(token)) {
+                return;
+            }
+            const hasLetter = /[A-Z]/.test(token);
+            const hasDigit = /[0-9]/.test(token);
+            if (!hasDigit) {
+                return;
+            }
+
+            let score = token.length;
+            if (hasLetter) {
+                score += 6;
+            }
+            if (/^[A-Z0-9\-_/.]+$/.test(token)) {
+                score += 3;
+            }
+            if (/^(0+|1+|2+|3+|4+|5+|6+|7+|8+|9+)$/.test(token)) {
+                score -= 8;
+            }
+            if (mode === 'barcode') {
+                if (/^[0-9]{8,20}$/.test(token)) {
+                    score += 8;
+                }
+                if (token.length >= 12) {
+                    score += 3;
+                }
+            } else if (mode === 'serial') {
+                if (hasLetter && hasDigit) {
+                    score += 8;
+                }
+            }
+
+            if (score > bestScore) {
+                best = token;
+                bestScore = score;
+            }
+        });
+
+        return best;
+    };
+
+    const prepareOcrCanvas = (source, width, height, options = {}) => {
+        if (!scannerCanvas) {
+            return false;
+        }
+
+        const cropWidthRatio = options.cropWidthRatio || 0.74;
+        const cropHeightRatio = options.cropHeightRatio || 0.34;
+        const useGrayscale = options.useGrayscale !== false;
+        const cropWidth = Math.max(1, Math.floor(width * cropWidthRatio));
+        const cropHeight = Math.max(1, Math.floor(height * cropHeightRatio));
+        const cropX = Math.max(0, Math.floor((width - cropWidth) / 2));
+        const cropY = Math.max(0, Math.floor((height - cropHeight) / 2));
+
+        scannerCanvas.width = cropWidth;
+        scannerCanvas.height = cropHeight;
+        const context = scannerCanvas.getContext('2d', { willReadFrequently: true });
+        context.drawImage(source, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+        if (useGrayscale) {
+            const imageData = context.getImageData(0, 0, cropWidth, cropHeight);
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = (data[i] * 0.299) + (data[i + 1] * 0.587) + (data[i + 2] * 0.114);
+                const boosted = gray > 150 ? 255 : 0;
+                data[i] = boosted;
+                data[i + 1] = boosted;
+                data[i + 2] = boosted;
+            }
+            context.putImageData(imageData, 0, 0);
+        }
+        return true;
+    };
+
+    const runOcrAndExtract = async (mode) => {
+        if (!window.Tesseract || !scannerCanvas) {
+            return '';
+        }
+        const result = await window.Tesseract.recognize(scannerCanvas, 'eng', {
+            tessedit_pageseg_mode: mode === 'barcode' ? '6' : '7',
+            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_/.' 
+        });
+        return extractBestToken(result?.data?.text || '', mode);
     };
 
     const captureFromSelectedImage = async (file) => {
@@ -418,17 +536,29 @@ document.addEventListener('DOMContentLoaded', function () {
             context.drawImage(image, 0, 0, image.width, image.height);
 
             if (activeMode === 'barcode') {
-                if (!('BarcodeDetector' in window)) {
-                    setStatus('Seu navegador nao suporta leitura automatica de codigo por foto. Tente Chrome no celular.', true);
-                    return;
+                if (hasNativeBarcodeSupport()) {
+                    const detector = new BarcodeDetector({
+                        formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code']
+                    });
+                    const results = await detector.detect(scannerCanvas);
+                    if (results.length && results[0].rawValue) {
+                        fillTargetField(results[0].rawValue);
+                        return;
+                    }
                 }
 
-                const detector = new BarcodeDetector({
-                    formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code']
+                if (!window.Tesseract) {
+                    setStatus('Nao encontrei um codigo de barras legivel na foto.', true);
+                    return;
+                }
+                prepareOcrCanvas(image, image.width, image.height, {
+                    cropWidthRatio: 0.84,
+                    cropHeightRatio: 0.34
                 });
-                const results = await detector.detect(scannerCanvas);
-                if (results.length && results[0].rawValue) {
-                    fillTargetField(results[0].rawValue);
+                setStatus('Tentando modo alternativo para codigo de barras...');
+                const barcodeText = await runOcrAndExtract('barcode');
+                if (barcodeText) {
+                    fillTargetField(barcodeText);
                     return;
                 }
                 setStatus('Nao encontrei um codigo de barras legivel na foto. Tente aproximar mais.', true);
@@ -439,14 +569,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 setStatus('OCR nao disponivel nesta tela.', true);
                 return;
             }
-
+            prepareOcrCanvas(image, image.width, image.height, {
+                cropWidthRatio: 0.78,
+                cropHeightRatio: 0.30
+            });
             setStatus('Lendo o numero de serie da foto...');
-            const result = await window.Tesseract.recognize(scannerCanvas, 'eng');
-            const text = (result.data.text || '')
-                .replace(/\s+/g, ' ')
-                .replace(/[^A-Za-z0-9\-_/]/g, ' ')
-                .trim();
-
+            const text = await runOcrAndExtract('serial');
             if (text) {
                 fillTargetField(text);
                 return;
@@ -467,8 +595,8 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     const scanBarcodeLoop = async () => {
-        if (!('BarcodeDetector' in window)) {
-            setStatus('Leitura de codigo de barras nao suportada neste navegador. Tente Chrome no celular.', true);
+        if (!hasNativeBarcodeSupport()) {
+            setStatus('Leitura automatica indisponivel aqui. Use "Capturar e ler" para modo alternativo.');
             return;
         }
 
@@ -505,21 +633,15 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        scannerCanvas.width = width;
-        scannerCanvas.height = height;
-        const context = scannerCanvas.getContext('2d');
-        context.drawImage(scannerVideo, 0, 0, width, height);
-
         setStatus('Lendo o numero de serie na imagem...');
         scannerCaptureButton.disabled = true;
 
         try {
-            const result = await window.Tesseract.recognize(scannerCanvas, 'eng');
-            const text = (result.data.text || '')
-                .replace(/\s+/g, ' ')
-                .replace(/[^A-Za-z0-9\-_/]/g, ' ')
-                .trim();
-
+            prepareOcrCanvas(scannerVideo, width, height, {
+                cropWidthRatio: 0.78,
+                cropHeightRatio: 0.30
+            });
+            const text = await runOcrAndExtract('serial');
             if (text) {
                 fillTargetField(text);
                 return;
@@ -527,6 +649,59 @@ document.addEventListener('DOMContentLoaded', function () {
             setStatus('Nao consegui identificar o numero de serie. Aproxime a camera e tente novamente.', true);
         } catch (error) {
             setStatus('Erro ao tentar ler o numero de serie.', true);
+        } finally {
+            scannerCaptureButton.disabled = false;
+        }
+    };
+
+    const captureForBarcodeFallback = async () => {
+        if (!scannerVideo || !scannerCanvas) {
+            return;
+        }
+        const width = scannerVideo.videoWidth;
+        const height = scannerVideo.videoHeight;
+        if (!width || !height) {
+            setStatus('A camera ainda nao ficou pronta. Tente novamente.', true);
+            return;
+        }
+
+        scannerCaptureButton.disabled = true;
+        setStatus('Capturando imagem do codigo...');
+        try {
+            scannerCanvas.width = width;
+            scannerCanvas.height = height;
+            const context = scannerCanvas.getContext('2d');
+            context.drawImage(scannerVideo, 0, 0, width, height);
+
+            if (hasNativeBarcodeSupport()) {
+                const detector = new BarcodeDetector({
+                    formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code']
+                });
+                const results = await detector.detect(scannerCanvas);
+                if (results.length && results[0].rawValue) {
+                    fillTargetField(results[0].rawValue);
+                    return;
+                }
+            }
+
+            if (!window.Tesseract) {
+                setStatus('Nao consegui ler o codigo de barras nesta captura.', true);
+                return;
+            }
+
+            prepareOcrCanvas(scannerVideo, width, height, {
+                cropWidthRatio: 0.84,
+                cropHeightRatio: 0.34
+            });
+            setStatus('Tentando modo alternativo para codigo de barras...');
+            const text = await runOcrAndExtract('barcode');
+            if (text) {
+                fillTargetField(text);
+                return;
+            }
+            setStatus('Nao consegui identificar o codigo. Aproxime a camera e tente novamente.', true);
+        } catch (error) {
+            setStatus('Erro ao tentar ler o codigo de barras.', true);
         } finally {
             scannerCaptureButton.disabled = false;
         }
@@ -540,7 +715,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         stopScanner();
-        scannerCaptureButton.classList.toggle('d-none', mode !== 'ocr');
+        const showCaptureButton = mode === 'ocr' || (mode === 'barcode' && !hasNativeBarcodeSupport());
+        scannerCaptureButton.classList.toggle('d-none', !showCaptureButton);
         scannerModalTitle.textContent = mode === 'barcode' ? 'Ler codigo de barras' : 'Ler numero de serie';
         setStatus('Abrindo camera...');
         scannerModal.show();
@@ -612,7 +788,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (scannerCaptureButton) {
-        scannerCaptureButton.addEventListener('click', captureForOcr);
+        scannerCaptureButton.addEventListener('click', () => {
+            if (activeMode === 'barcode') {
+                captureForBarcodeFallback();
+                return;
+            }
+            captureForOcr();
+        });
     }
 
     if (scannerImageInput) {
